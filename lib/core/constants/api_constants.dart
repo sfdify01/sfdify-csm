@@ -8,4 +8,9 @@ abstract class ApiConstants {
   static const String register = '/auth/register';
   static const String refreshToken = '/auth/refresh';
   static const String user = '/user';
+
+  // Dispute Endpoints
+  static const String disputeMetrics = '$baseUrl/disputes/metrics';
+  static const String disputes = '$baseUrl/disputes';
+  static const String disputesById = '$baseUrl/disputes/{id}';
 }

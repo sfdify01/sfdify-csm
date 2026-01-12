@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sfdify_scm/core/constants/app_constants.dart';
+import 'package:sfdify_scm/core/router/route_names.dart';
 import 'package:sfdify_scm/features/home/presentation/bloc/home_bloc.dart';
 import 'package:sfdify_scm/features/home/presentation/widgets/home_card.dart';
 import 'package:sfdify_scm/injection/injection.dart';
@@ -85,10 +87,20 @@ class HomeView extends StatelessWidget {
                 },
                 child: ListView.separated(
                   padding: const EdgeInsets.all(16),
-                  itemCount: state.data.length,
+                  itemCount: state.data.length + 1, // +1 for dispute card
                   separatorBuilder: (_, __) => const Gap(12),
                   itemBuilder: (context, index) {
-                    final item = state.data[index];
+                    // Show dispute navigation card first
+                    if (index == 0) {
+                      return HomeCard(
+                        title: '🔥 Dispute Overview Dashboard',
+                        description:
+                            'View all disputes, metrics, and recent activity. Click to open the new Dispute Overview page!',
+                        onTap: () => context.go(RoutePaths.disputeOverview),
+                      );
+                    }
+
+                    final item = state.data[index - 1];
                     return HomeCard(
                       title: item.title,
                       description: item.description,

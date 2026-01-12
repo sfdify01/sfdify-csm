@@ -5,6 +5,9 @@ abstract class RouteNames {
   static const String register = 'register';
   static const String settings = 'settings';
   static const String profile = 'profile';
+
+  // Dispute routes
+  static const String disputeOverview = 'dispute_overview';
 }
 
 abstract class RoutePaths {
@@ -14,4 +17,7 @@ abstract class RoutePaths {
   static const String register = '/register';
   static const String settings = '/settings';
   static const String profile = '/profile';
+
+  // Dispute routes
+  static const String disputeOverview = '/disputes';
 }

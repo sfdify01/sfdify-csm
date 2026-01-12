@@ -16,7 +16,18 @@ import 'package:logger/logger.dart' as _i974;
 import 'package:shared_preferences/shared_preferences.dart' as _i460;
 
 import '../core/network/dio_client.dart' as _i393;
+import '../core/network/network_info.dart' as _i6;
 import '../core/router/app_router.dart' as _i877;
+import '../features/dispute/data/datasources/dispute_remote_datasource.dart'
+    as _i717;
+import '../features/dispute/data/repositories/dispute_repository_impl.dart'
+    as _i1061;
+import '../features/dispute/domain/repositories/dispute_repository.dart'
+    as _i328;
+import '../features/dispute/domain/usecases/get_dispute_metrics.dart' as _i620;
+import '../features/dispute/domain/usecases/get_disputes.dart' as _i627;
+import '../features/dispute/presentation/bloc/dispute_overview_bloc.dart'
+    as _i689;
 import '../features/home/data/datasources/home_remote_datasource.dart' as _i75;
 import '../features/home/data/repositories/home_repository_impl.dart' as _i6;
 import '../features/home/domain/repositories/home_repository.dart' as _i66;
@@ -40,6 +51,7 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.singleton<_i877.AppRouter>(() => registerModule.appRouter);
     gh.singleton<_i354.ThemeBloc>(() => _i354.ThemeBloc());
+    gh.factory<_i6.NetworkInfo>(() => _i6.NetworkInfoImpl());
     gh.factory<_i75.HomeRemoteDataSource>(
       () => const _i75.HomeRemoteDataSourceImpl(),
     );
@@ -53,7 +65,28 @@ extension GetItInjectableX on _i174.GetIt {
     gh.singleton<_i393.DioClient>(
       () => registerModule.dioClient(gh<_i361.Dio>()),
     );
+    gh.factory<_i717.DisputeRemoteDataSource>(
+      () => _i717.DisputeRemoteDataSourceImpl(gh<_i393.DioClient>()),
+    );
     gh.factory<_i824.HomeBloc>(() => _i824.HomeBloc(gh<_i489.GetHomeData>()));
+    gh.factory<_i328.DisputeRepository>(
+      () => _i1061.DisputeRepositoryImpl(
+        gh<_i717.DisputeRemoteDataSource>(),
+        gh<_i6.NetworkInfo>(),
+      ),
+    );
+    gh.factory<_i620.GetDisputeMetrics>(
+      () => _i620.GetDisputeMetrics(gh<_i328.DisputeRepository>()),
+    );
+    gh.factory<_i627.GetDisputes>(
+      () => _i627.GetDisputes(gh<_i328.DisputeRepository>()),
+    );
+    gh.factory<_i689.DisputeOverviewBloc>(
+      () => _i689.DisputeOverviewBloc(
+        gh<_i620.GetDisputeMetrics>(),
+        gh<_i627.GetDisputes>(),
+      ),
+    );
     return this;
   }
 }

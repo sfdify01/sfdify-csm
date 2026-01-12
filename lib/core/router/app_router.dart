@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sfdify_scm/core/router/route_names.dart';
+import 'package:sfdify_scm/features/dispute/presentation/pages/dispute_overview_page.dart';
 import 'package:sfdify_scm/features/home/presentation/pages/home_page.dart';
+import 'package:sfdify_scm/shared/presentation/layout/main_layout.dart';
 
 class AppRouter {
   AppRouter();
@@ -14,10 +16,25 @@ class AppRouter {
   );
 
   List<RouteBase> get _routes => [
-        GoRoute(
-          path: RoutePaths.home,
-          name: RouteNames.home,
-          builder: (context, state) => const HomePage(),
+        // Shell route wraps all pages with MainLayout (includes sidebar)
+        ShellRoute(
+          builder: (context, state, child) => MainLayout(child: child),
+          routes: [
+            GoRoute(
+              path: RoutePaths.home,
+              name: RouteNames.home,
+              pageBuilder: (context, state) => NoTransitionPage(
+                child: const HomePage(),
+              ),
+            ),
+            GoRoute(
+              path: RoutePaths.disputeOverview,
+              name: RouteNames.disputeOverview,
+              pageBuilder: (context, state) => NoTransitionPage(
+                child: const DisputeOverviewPage(),
+              ),
+            ),
+          ],
         ),
       ];
 
