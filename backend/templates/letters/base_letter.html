@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Credit Dispute Letter</title>
+</head>
+<body>
+    <!-- Return Address -->
+    <div class="letterhead">
+        {{ consumer.full_name }}<br>
+        {{ return_address.line1 }}<br>
+        {% if return_address.line2 %}{{ return_address.line2 }}<br>{% endif %}
+        {{ return_address.city }}, {{ return_address.state }} {{ return_address.zip }}
+    </div>
+
+    <!-- Date -->
+    <div class="date">
+        {{ current_date }}
+    </div>
+
+    <!-- Recipient Address -->
+    <div class="recipient-address">
+        {{ recipient.name }}<br>
+        {{ recipient.address.line1 }}<br>
+        {% if recipient.address.line2 %}{{ recipient.address.line2 }}<br>{% endif %}
+        {{ recipient.address.city }}, {{ recipient.address.state }} {{ recipient.address.zip }}
+    </div>
+
+    <!-- Subject Line -->
+    <div class="subject">
+        <strong>RE: Credit Dispute - {{ dispute.bureau }}</strong><br>
+        <strong>Dispute Reference: {{ dispute.number }}</strong>
+    </div>
+
+    <!-- Salutation -->
+    <div class="salutation">
+        <p>To Whom It May Concern:</p>
+    </div>
+
+    <!-- Body Content -->
+    <div class="body">
+        {% block content %}
+        <p>{{ dispute.narrative }}</p>
+        {% endblock %}
+    </div>
+
+    <!-- Account Information (if tradeline exists) -->
+    {% if tradeline %}
+    <div class="account-info">
+        <h2>Account Information</h2>
+        <table>
+            <tr>
+                <td>Creditor Name:</td>
+                <td>{{ tradeline.creditor_name }}</td>
+            </tr>
+            <tr>
+                <td>Account Number:</td>
+                <td>{{ tradeline.account_number }}</td>
+            </tr>
+            {% if tradeline.account_type %}
+            <tr>
+                <td>Account Type:</td>
+                <td>{{ tradeline.account_type }}</td>
+            </tr>
+            {% endif %}
+            {% if tradeline.current_balance %}
+            <tr>
+                <td>Balance Reported:</td>
+                <td>${{ tradeline.current_balance }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Consumer Identification -->
+    <div class="consumer-info">
+        <h2>Consumer Identification</h2>
+        <table>
+            <tr>
+                <td>Full Name:</td>
+                <td>{{ consumer.full_name }}</td>
+            </tr>
+            <tr>
+                <td>SSN (Last 4):</td>
+                <td>XXX-XX-{{ consumer.ssn_last4 }}</td>
+            </tr>
+            {% if consumer.dob %}
+            <tr>
+                <td>Date of Birth:</td>
+                <td>{{ consumer.dob }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td>Current Address:</td>
+                <td>
+                    {{ consumer.address.line1 }}{% if consumer.address.line2 %}, {{ consumer.address.line2 }}{% endif %}<br>
+                    {{ consumer.address.city }}, {{ consumer.address.state }} {{ consumer.address.zip }}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Closing -->
+    <div class="closing">
+        {% block closing %}
+        <p>Please investigate this matter and provide me with the results within 30 days as required by federal law.</p>
+        {% endblock %}
+    </div>
+
+    <!-- Signature Block -->
+    <div class="signature-block">
+        <p>Sincerely,</p>
+        <div class="signature-line"></div>
+        <p>{{ consumer.full_name }}</p>
+    </div>
+
+    <!-- Enclosures -->
+    <div class="enclosures">
+        {% block enclosures %}
+        <p><strong>Enclosures:</strong></p>
+        <ul>
+            <li>Copy of government-issued identification</li>
+            <li>Proof of current address (utility bill or bank statement)</li>
+        </ul>
+        {% endblock %}
+    </div>
+
+    <!-- Legal Notice -->
+    <div class="legal-notice">
+        {% block legal_notice %}
+        <p>This letter is sent pursuant to the Fair Credit Reporting Act (FCRA), 15 U.S.C. Section 1681.</p>
+        {% endblock %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,51 @@
+{% extends "base_letter.html" %}
+
+{% block content %}
+<p>I am writing to formally dispute the accuracy of information contained in my credit file pursuant to my rights under the Fair Credit Reporting Act (FCRA), specifically Section 611.</p>
+
+<p>After reviewing my credit report, I have identified information that I believe to be inaccurate, incomplete, or unverifiable. Under Section 611 of the FCRA (15 U.S.C. Section 1681i), I am entitled to dispute this information and have it investigated.</p>
+
+<h2>Reason for Dispute</h2>
+{% if dispute.reason_codes %}
+<p>The following issues have been identified with this account:</p>
+<ul>
+{% for reason in dispute.reason_codes %}
+    <li>{{ reason }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if dispute.narrative %}
+<p><strong>Detailed Explanation:</strong> {{ dispute.narrative }}</p>
+{% endif %}
+
+<h2>Your Legal Obligations</h2>
+<p>Under the FCRA, you are required to:</p>
+<ol>
+    <li>Conduct a reasonable investigation into this dispute within 30 days (or 45 days if I provide additional information)</li>
+    <li>Forward all relevant information that I provide to the information furnisher</li>
+    <li>Review and consider all relevant information</li>
+    <li>Provide me with written notification of the results of your investigation</li>
+    <li>Delete or modify any information found to be inaccurate, incomplete, or unverifiable</li>
+</ol>
+
+<p>Please note that a perfunctory or cursory investigation does not satisfy the "reasonable investigation" requirement under the FCRA. You must actually verify the accuracy of this information with the original creditor or furnisher.</p>
+
+<h2>Requested Action</h2>
+<p>I request that you:</p>
+<ul>
+    <li>Investigate this dispute thoroughly</li>
+    <li>Contact the original creditor/furnisher to verify all aspects of this account</li>
+    <li>Provide me with documentation of your investigation</li>
+    <li>If the information cannot be verified, remove it from my credit report immediately</li>
+    <li>Send me a free copy of my credit report reflecting any changes made</li>
+</ul>
+{% endblock %}
+
+{% block closing %}
+<p>Please complete your investigation and provide me with the results within 30 days as required by federal law. If you determine that the disputed information is inaccurate, incomplete, or cannot be verified, please delete it from my credit file immediately and notify me in writing of the deletion.</p>
+{% endblock %}
+
+{% block legal_notice %}
+<p>This dispute is submitted pursuant to the Fair Credit Reporting Act (FCRA), 15 U.S.C. Section 1681i (Section 611). Failure to conduct a reasonable investigation or to correct inaccurate information may result in a complaint being filed with the Consumer Financial Protection Bureau (CFPB) and/or legal action for willful non-compliance under 15 U.S.C. Section 1681n.</p>
+{% endblock %}

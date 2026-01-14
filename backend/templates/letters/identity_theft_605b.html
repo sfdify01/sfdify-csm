@@ -1,0 +1,66 @@
+{% extends "base_letter.html" %}
+
+{% block content %}
+<p>I am writing to report that I am a victim of identity theft and to request that you block the fraudulent information appearing on my credit report pursuant to Section 605B of the Fair Credit Reporting Act (FCRA), 15 U.S.C. Section 1681c-2.</p>
+
+<h2>Identity Theft Declaration</h2>
+<p>I hereby declare under penalty of perjury that:</p>
+<ol>
+    <li>I did not authorize the opening or use of the account(s) listed below</li>
+    <li>The information appearing on my credit report related to this account is the result of identity theft</li>
+    <li>I have not received any benefit from this account</li>
+</ol>
+
+<h2>Fraudulent Account Information</h2>
+{% if tradeline %}
+<p>The following account was opened fraudulently:</p>
+<ul>
+    <li><strong>Creditor:</strong> {{ tradeline.creditor_name }}</li>
+    <li><strong>Account Number:</strong> {{ tradeline.account_number }}</li>
+    {% if tradeline.opened_date %}<li><strong>Date Opened:</strong> {{ tradeline.opened_date }}</li>{% endif %}
+</ul>
+{% endif %}
+
+{% if dispute.narrative %}
+<p><strong>Additional Details:</strong> {{ dispute.narrative }}</p>
+{% endif %}
+
+<h2>Required Actions Under Section 605B</h2>
+<p>Under Section 605B of the FCRA, you are required to:</p>
+<ol>
+    <li><strong>Block the Information:</strong> Block the reporting of any information that resulted from identity theft within 4 business days of receiving this notice</li>
+    <li><strong>Notify Furnishers:</strong> Promptly notify the furnisher(s) of information that the information may be the result of identity theft</li>
+    <li><strong>No Reinsertion:</strong> Not reinsert the blocked information unless the information is later verified as accurate</li>
+</ol>
+
+<h2>Documentation Provided</h2>
+<p>As required by the FCRA, I am enclosing:</p>
+<ul>
+    <li>Copy of a valid government-issued identification</li>
+    <li>Proof of address</li>
+    <li>FTC Identity Theft Report</li>
+    <li>Police report (if available)</li>
+    <li>Identity Theft Affidavit</li>
+</ul>
+{% endblock %}
+
+{% block closing %}
+<p>Please block this fraudulent information immediately and provide me with written confirmation. I request that you complete this action within 4 business days as required by Section 605B of the FCRA.</p>
+
+<p>Please also provide me with a free copy of my credit report after the block has been applied.</p>
+{% endblock %}
+
+{% block enclosures %}
+<p><strong>Enclosures:</strong></p>
+<ul>
+    <li>FTC Identity Theft Report</li>
+    <li>Police Report (if available)</li>
+    <li>Identity Theft Affidavit</li>
+    <li>Copy of government-issued identification (front and back)</li>
+    <li>Proof of current address</li>
+</ul>
+{% endblock %}
+
+{% block legal_notice %}
+<p>This request is made pursuant to Section 605B of the Fair Credit Reporting Act (15 U.S.C. Section 1681c-2). Under this section, you are required to block the fraudulent information within 4 business days of receiving this notification. Failure to comply may result in civil liability under the FCRA.</p>
+{% endblock %}
