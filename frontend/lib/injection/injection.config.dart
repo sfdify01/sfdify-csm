@@ -9,12 +9,21 @@
 // coverage:ignore-file
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'package:cloud_functions/cloud_functions.dart' as _i809;
 import 'package:dio/dio.dart' as _i361;
+import 'package:firebase_analytics/firebase_analytics.dart' as _i398;
+import 'package:firebase_auth/firebase_auth.dart' as _i59;
+import 'package:firebase_crashlytics/firebase_crashlytics.dart' as _i141;
+import 'package:firebase_remote_config/firebase_remote_config.dart' as _i627;
+import 'package:firebase_storage/firebase_storage.dart' as _i457;
 import 'package:get_it/get_it.dart' as _i174;
 import 'package:injectable/injectable.dart' as _i526;
 import 'package:logger/logger.dart' as _i974;
 import 'package:shared_preferences/shared_preferences.dart' as _i460;
 
+import '../core/config/feature_flags.dart' as _i316;
+import '../core/monitoring/analytics_service.dart' as _i423;
+import '../core/monitoring/error_tracker.dart' as _i161;
 import '../core/network/dio_client.dart' as _i393;
 import '../core/network/network_info.dart' as _i6;
 import '../core/router/app_router.dart' as _i877;
@@ -50,7 +59,29 @@ extension GetItInjectableX on _i174.GetIt {
       preResolve: true,
     );
     gh.singleton<_i877.AppRouter>(() => registerModule.appRouter);
+    gh.singleton<_i59.FirebaseAuth>(() => registerModule.firebaseAuth);
+    gh.singleton<_i809.FirebaseFunctions>(
+      () => registerModule.firebaseFunctions,
+    );
+    gh.singleton<_i457.FirebaseStorage>(() => registerModule.firebaseStorage);
+    gh.singleton<_i398.FirebaseAnalytics>(
+      () => registerModule.firebaseAnalytics,
+    );
+    gh.singleton<_i141.FirebaseCrashlytics>(() => registerModule.crashlytics);
+    gh.singleton<_i627.FirebaseRemoteConfig>(() => registerModule.remoteConfig);
     gh.singleton<_i354.ThemeBloc>(() => _i354.ThemeBloc());
+    gh.singleton<_i423.AnalyticsService>(
+      () => _i423.AnalyticsService(
+        gh<_i398.FirebaseAnalytics>(),
+        gh<_i974.Logger>(),
+      ),
+    );
+    gh.singleton<_i316.FeatureFlags>(
+      () => _i316.FeatureFlags(
+        gh<_i627.FirebaseRemoteConfig>(),
+        gh<_i974.Logger>(),
+      ),
+    );
     gh.factory<_i6.NetworkInfo>(() => _i6.NetworkInfoImpl());
     gh.factory<_i75.HomeRemoteDataSource>(
       () => const _i75.HomeRemoteDataSourceImpl(),
@@ -61,6 +92,12 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.factory<_i489.GetHomeData>(
       () => _i489.GetHomeData(gh<_i66.HomeRepository>()),
+    );
+    gh.singleton<_i161.ErrorTracker>(
+      () => _i161.ErrorTracker(
+        gh<_i141.FirebaseCrashlytics>(),
+        gh<_i974.Logger>(),
+      ),
     );
     gh.singleton<_i393.DioClient>(
       () => registerModule.dioClient(gh<_i361.Dio>()),
