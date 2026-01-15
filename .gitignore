@@ -37,6 +37,8 @@ migrate_working_dir/
 .claude
 key.properties
 upload-keysore.jks
+frontend/lib/firebase_options.dart
+frontend/firebase.json
 
 # Symbolication related
 app.*.symbols

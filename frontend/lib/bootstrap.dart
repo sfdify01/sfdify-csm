@@ -17,7 +17,7 @@ import 'package:sfdify_scm/injection/injection.dart';
 Future<void> bootstrap(FutureOr<Widget> Function() builder) async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase FIRST (before any other services)
+  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
