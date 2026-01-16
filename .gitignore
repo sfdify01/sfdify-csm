@@ -33,12 +33,13 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
-
+functions/node_modules
 .claude
 key.properties
 upload-keysore.jks
 frontend/lib/firebase_options.dart
 frontend/firebase.json
+frontend/build
 
 # Symbolication related
 app.*.symbols

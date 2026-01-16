@@ -3,6 +3,7 @@ abstract class RouteNames {
   static const String home = 'home';
   static const String login = 'login';
   static const String register = 'register';
+  static const String companySetup = 'company_setup';
   static const String settings = 'settings';
   static const String profile = 'profile';
 
@@ -15,6 +16,7 @@ abstract class RoutePaths {
   static const String home = '/home';
   static const String login = '/login';
   static const String register = '/register';
+  static const String companySetup = '/company-setup';
   static const String settings = '/settings';
   static const String profile = '/profile';
 

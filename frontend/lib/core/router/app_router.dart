@@ -1,21 +1,107 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sfdify_scm/core/router/route_names.dart';
+import 'package:sfdify_scm/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:sfdify_scm/features/auth/presentation/pages/company_setup_page.dart';
+import 'package:sfdify_scm/features/auth/presentation/pages/login_page.dart';
+import 'package:sfdify_scm/features/auth/presentation/pages/register_page.dart';
 import 'package:sfdify_scm/features/dispute/presentation/pages/dispute_overview_page.dart';
 import 'package:sfdify_scm/features/home/presentation/pages/home_page.dart';
+import 'package:sfdify_scm/injection/injection.dart';
 import 'package:sfdify_scm/shared/presentation/layout/main_layout.dart';
+
+/// Listenable that triggers router refresh when stream emits
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    _subscription = stream.listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
 
 class AppRouter {
   AppRouter();
 
   late final GoRouter router = GoRouter(
-    initialLocation: RoutePaths.home,
+    initialLocation: RoutePaths.login,
     debugLogDiagnostics: true,
     routes: _routes,
     errorBuilder: _errorBuilder,
+    redirect: _authRedirect,
+    refreshListenable: GoRouterRefreshStream(
+      getIt<AuthBloc>().stream.map((state) => state.status),
+    ),
   );
 
+  /// Public routes that don't require authentication
+  static const _publicRoutes = [
+    RoutePaths.login,
+    RoutePaths.register,
+    RoutePaths.companySetup,
+  ];
+
+  /// Redirect based on authentication state
+  String? _authRedirect(BuildContext context, GoRouterState state) {
+    final authBloc = getIt<AuthBloc>();
+    final authState = authBloc.state;
+    final currentPath = state.matchedLocation;
+    final isPublicRoute = _publicRoutes.contains(currentPath);
+    final isAuthenticated = authState.status == AuthStatus.authenticated;
+    final needsCompanySetup =
+        authState.status == AuthStatus.needsCompanySetup;
+
+    // If user needs company setup, redirect to company setup page
+    if (needsCompanySetup && currentPath != RoutePaths.companySetup) {
+      return RoutePaths.companySetup;
+    }
+
+    // If not authenticated and not on a public route, redirect to login
+    if (!isAuthenticated && !needsCompanySetup && !isPublicRoute) {
+      return RoutePaths.login;
+    }
+
+    // If authenticated and on login/register page, redirect to home
+    if (isAuthenticated &&
+        (currentPath == RoutePaths.login ||
+            currentPath == RoutePaths.register)) {
+      return RoutePaths.home;
+    }
+
+    return null;
+  }
+
   List<RouteBase> get _routes => [
+        // Auth routes (outside shell - no sidebar)
+        GoRoute(
+          path: RoutePaths.login,
+          name: RouteNames.login,
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: LoginPage(),
+          ),
+        ),
+        GoRoute(
+          path: RoutePaths.register,
+          name: RouteNames.register,
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: RegisterPage(),
+          ),
+        ),
+        GoRoute(
+          path: RoutePaths.companySetup,
+          name: RouteNames.companySetup,
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: CompanySetupPage(),
+          ),
+        ),
+
         // Shell route wraps all pages with MainLayout (includes sidebar)
         ShellRoute(
           builder: (context, state, child) => MainLayout(child: child),

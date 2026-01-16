@@ -42,7 +42,8 @@ class DisputeRepositoryImpl implements DisputeRepository {
   Future<Either<Failure, List<DisputeEntity>>> getDisputes({
     String? bureau,
     String? status,
-    int page = 1,
+    int? limit,
+    String? cursor,
   }) async {
     if (!await _networkInfo.isConnected) {
       return const Left(NetworkFailure());
@@ -52,9 +53,138 @@ class DisputeRepositoryImpl implements DisputeRepository {
       final disputes = await _remoteDataSource.getDisputes(
         bureau: bureau,
         status: status,
-        page: page,
+        limit: limit,
+        cursor: cursor,
       );
       return Right(disputes);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
+    } on UnauthorizedException catch (e) {
+      return Left(UnauthorizedFailure(message: e.message));
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, DisputeEntity>> getDispute(String disputeId) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final dispute = await _remoteDataSource.getDispute(disputeId);
+      return Right(dispute);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
+    } on UnauthorizedException catch (e) {
+      return Left(UnauthorizedFailure(message: e.message));
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, DisputeEntity>> createDispute(
+    Map<String, dynamic> data,
+  ) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final dispute = await _remoteDataSource.createDispute(data);
+      return Right(dispute);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
+    } on UnauthorizedException catch (e) {
+      return Left(UnauthorizedFailure(message: e.message));
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, DisputeEntity>> updateDispute(
+    String disputeId,
+    Map<String, dynamic> updates,
+  ) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final dispute = await _remoteDataSource.updateDispute(disputeId, updates);
+      return Right(dispute);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
+    } on UnauthorizedException catch (e) {
+      return Left(UnauthorizedFailure(message: e.message));
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, DisputeEntity>> submitDispute(String disputeId) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final dispute = await _remoteDataSource.submitDispute(disputeId);
+      return Right(dispute);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
+    } on UnauthorizedException catch (e) {
+      return Left(UnauthorizedFailure(message: e.message));
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, DisputeEntity>> approveDispute(String disputeId) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final dispute = await _remoteDataSource.approveDispute(disputeId);
+      return Right(dispute);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
+    } on UnauthorizedException catch (e) {
+      return Left(UnauthorizedFailure(message: e.message));
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, DisputeEntity>> closeDispute(
+    String disputeId,
+    String resolution,
+  ) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+
+    try {
+      final dispute = await _remoteDataSource.closeDispute(disputeId, resolution);
+      return Right(dispute);
     } on ServerException catch (e) {
       return Left(ServerFailure(message: e.message));
     } on NetworkException catch (e) {

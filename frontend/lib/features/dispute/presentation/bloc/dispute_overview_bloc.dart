@@ -27,7 +27,7 @@ class DisputeOverviewBloc
       transformer: droppable(),
     );
     on<DisputeOverviewBureauFilterChanged>(_onBureauFilterChanged);
-    on<DisputeOverviewPageChanged>(_onPageChanged);
+    on<DisputeOverviewLoadMore>(_onLoadMore);
   }
 
   final GetDisputeMetrics _getDisputeMetrics;
@@ -44,7 +44,7 @@ class DisputeOverviewBloc
       _getDisputeMetrics(const NoParams()),
       _getDisputes(GetDisputesParams(
         bureau: state.selectedBureau,
-        page: state.currentPage,
+        limit: 20,
       )),
     ]);
 
@@ -72,6 +72,7 @@ class DisputeOverviewBloc
               status: DisputeOverviewStatus.success,
               metrics: metrics,
               disputes: disputes,
+              hasMore: disputes.length >= 20,
             ));
           },
         );
@@ -88,7 +89,7 @@ class DisputeOverviewBloc
       _getDisputeMetrics(const NoParams()),
       _getDisputes(GetDisputesParams(
         bureau: state.selectedBureau,
-        page: state.currentPage,
+        limit: 20,
       )),
     ]);
 
@@ -110,6 +111,7 @@ class DisputeOverviewBloc
               status: DisputeOverviewStatus.success,
               metrics: metrics,
               disputes: disputes,
+              hasMore: disputes.length >= 20,
             ));
           },
         );
@@ -123,16 +125,35 @@ class DisputeOverviewBloc
   ) async {
     emit(state.copyWith(
       selectedBureau: event.bureau,
-      currentPage: 1, // Reset to first page
+      cursor: null,
     ));
     add(const DisputeOverviewLoadRequested());
   }
 
-  Future<void> _onPageChanged(
-    DisputeOverviewPageChanged event,
+  Future<void> _onLoadMore(
+    DisputeOverviewLoadMore event,
     Emitter<DisputeOverviewState> emit,
   ) async {
-    emit(state.copyWith(currentPage: event.page));
-    add(const DisputeOverviewLoadRequested());
+    if (!state.hasMore || state.status == DisputeOverviewStatus.loading) {
+      return;
+    }
+
+    final result = await _getDisputes(GetDisputesParams(
+      bureau: state.selectedBureau,
+      limit: 20,
+      cursor: state.cursor,
+    ));
+
+    result.fold(
+      (failure) {
+        emit(state.copyWith(errorMessage: failure.message));
+      },
+      (disputes) {
+        emit(state.copyWith(
+          disputes: [...state.disputes, ...disputes],
+          hasMore: disputes.length >= 20,
+        ));
+      },
+    );
   }
 }

@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "ustaxx-csm",
+    "staging": "ustaxx-csm-staging",
+    "production": "ustaxx-csm"
+  }
+}

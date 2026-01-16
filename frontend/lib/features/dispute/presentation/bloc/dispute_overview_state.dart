@@ -10,8 +10,8 @@ class DisputeOverviewState extends Equatable {
     this.metrics,
     this.disputes = const [],
     this.selectedBureau,
-    this.currentPage = 1,
-    this.totalPages = 1,
+    this.cursor,
+    this.hasMore = false,
     this.errorMessage,
   });
 
@@ -19,8 +19,8 @@ class DisputeOverviewState extends Equatable {
   final DisputeMetricsEntity? metrics;
   final List<DisputeEntity> disputes;
   final String? selectedBureau;
-  final int currentPage;
-  final int totalPages;
+  final String? cursor;
+  final bool hasMore;
   final String? errorMessage;
 
   DisputeOverviewState copyWith({
@@ -28,8 +28,8 @@ class DisputeOverviewState extends Equatable {
     DisputeMetricsEntity? metrics,
     List<DisputeEntity>? disputes,
     String? selectedBureau,
-    int? currentPage,
-    int? totalPages,
+    String? cursor,
+    bool? hasMore,
     String? errorMessage,
   }) {
     return DisputeOverviewState(
@@ -37,8 +37,8 @@ class DisputeOverviewState extends Equatable {
       metrics: metrics ?? this.metrics,
       disputes: disputes ?? this.disputes,
       selectedBureau: selectedBureau ?? this.selectedBureau,
-      currentPage: currentPage ?? this.currentPage,
-      totalPages: totalPages ?? this.totalPages,
+      cursor: cursor,
+      hasMore: hasMore ?? this.hasMore,
       errorMessage: errorMessage,
     );
   }
@@ -49,8 +49,8 @@ class DisputeOverviewState extends Equatable {
         metrics,
         disputes,
         selectedBureau,
-        currentPage,
-        totalPages,
+        cursor,
+        hasMore,
         errorMessage,
       ];
 }

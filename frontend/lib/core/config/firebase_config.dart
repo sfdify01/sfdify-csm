@@ -17,11 +17,11 @@ abstract class FirebaseConfig {
   static String get functionsUrl {
     switch (EnvironmentConfig.current) {
       case Environment.dev:
-        return 'http://127.0.0.1:5001/sfdify-dev/us-central1';
+        return 'http://127.0.0.1:5001/ustaxx-csm/us-central1';
       case Environment.staging:
-        return 'https://us-central1-sfdify-staging.cloudfunctions.net';
+        return 'https://us-central1-ustaxx-csm.cloudfunctions.net';
       case Environment.prod:
-        return 'https://us-central1-sfdify-production.cloudfunctions.net';
+        return 'https://us-central1-ustaxx-csm.cloudfunctions.net';
     }
   }
 

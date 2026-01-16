@@ -9,6 +9,25 @@ abstract class DisputeRepository {
   Future<Either<Failure, List<DisputeEntity>>> getDisputes({
     String? bureau,
     String? status,
-    int page = 1,
+    int? limit,
+    String? cursor,
   });
+
+  Future<Either<Failure, DisputeEntity>> getDispute(String disputeId);
+
+  Future<Either<Failure, DisputeEntity>> createDispute(Map<String, dynamic> data);
+
+  Future<Either<Failure, DisputeEntity>> updateDispute(
+    String disputeId,
+    Map<String, dynamic> updates,
+  );
+
+  Future<Either<Failure, DisputeEntity>> submitDispute(String disputeId);
+
+  Future<Either<Failure, DisputeEntity>> approveDispute(String disputeId);
+
+  Future<Either<Failure, DisputeEntity>> closeDispute(
+    String disputeId,
+    String resolution,
+  );
 }

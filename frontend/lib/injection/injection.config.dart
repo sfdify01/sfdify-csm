@@ -27,6 +27,16 @@ import '../core/monitoring/error_tracker.dart' as _i161;
 import '../core/network/dio_client.dart' as _i393;
 import '../core/network/network_info.dart' as _i6;
 import '../core/router/app_router.dart' as _i877;
+import '../core/services/cloud_functions_service.dart' as _i816;
+import '../core/services/firebase_auth_service.dart' as _i781;
+import '../features/auth/presentation/bloc/auth_bloc.dart' as _i59;
+import '../features/consumer/data/datasources/consumer_remote_datasource.dart'
+    as _i391;
+import '../features/consumer/data/repositories/consumer_repository_impl.dart'
+    as _i677;
+import '../features/consumer/domain/repositories/consumer_repository.dart'
+    as _i236;
+import '../features/consumer/domain/usecases/get_consumers.dart' as _i130;
 import '../features/dispute/data/datasources/dispute_remote_datasource.dart'
     as _i717;
 import '../features/dispute/data/repositories/dispute_repository_impl.dart'
@@ -37,11 +47,31 @@ import '../features/dispute/domain/usecases/get_dispute_metrics.dart' as _i620;
 import '../features/dispute/domain/usecases/get_disputes.dart' as _i627;
 import '../features/dispute/presentation/bloc/dispute_overview_bloc.dart'
     as _i689;
+import '../features/evidence/data/datasources/evidence_remote_datasource.dart'
+    as _i1023;
+import '../features/evidence/data/repositories/evidence_repository_impl.dart'
+    as _i282;
+import '../features/evidence/domain/repositories/evidence_repository.dart'
+    as _i211;
 import '../features/home/data/datasources/home_remote_datasource.dart' as _i75;
 import '../features/home/data/repositories/home_repository_impl.dart' as _i6;
 import '../features/home/domain/repositories/home_repository.dart' as _i66;
 import '../features/home/domain/usecases/get_home_data.dart' as _i489;
 import '../features/home/presentation/bloc/home_bloc.dart' as _i824;
+import '../features/letter/data/datasources/letter_remote_datasource.dart'
+    as _i869;
+import '../features/letter/data/repositories/letter_repository_impl.dart'
+    as _i639;
+import '../features/letter/domain/repositories/letter_repository.dart' as _i887;
+import '../features/tenant/data/datasources/tenant_remote_datasource.dart'
+    as _i718;
+import '../features/tenant/data/repositories/tenant_repository_impl.dart'
+    as _i878;
+import '../features/tenant/domain/repositories/tenant_repository.dart' as _i597;
+import '../features/users/data/datasources/user_remote_datasource.dart'
+    as _i466;
+import '../features/users/data/repositories/user_repository_impl.dart' as _i712;
+import '../features/users/domain/repositories/user_repository.dart' as _i572;
 import '../shared/presentation/bloc/theme/theme_bloc.dart' as _i354;
 import 'register_module.dart' as _i291;
 
@@ -83,15 +113,15 @@ extension GetItInjectableX on _i174.GetIt {
       ),
     );
     gh.factory<_i6.NetworkInfo>(() => _i6.NetworkInfoImpl());
-    gh.factory<_i75.HomeRemoteDataSource>(
-      () => const _i75.HomeRemoteDataSourceImpl(),
-    );
     gh.singleton<_i361.Dio>(() => registerModule.dio(gh<_i974.Logger>()));
-    gh.factory<_i66.HomeRepository>(
-      () => _i6.HomeRepositoryImpl(gh<_i75.HomeRemoteDataSource>()),
+    gh.singleton<_i816.CloudFunctionsService>(
+      () => _i816.CloudFunctionsService(gh<_i809.FirebaseFunctions>()),
     );
-    gh.factory<_i489.GetHomeData>(
-      () => _i489.GetHomeData(gh<_i66.HomeRepository>()),
+    gh.singleton<_i781.FirebaseAuthService>(
+      () => _i781.FirebaseAuthService(
+        gh<_i59.FirebaseAuth>(),
+        gh<_i816.CloudFunctionsService>(),
+      ),
     );
     gh.singleton<_i161.ErrorTracker>(
       () => _i161.ErrorTracker(
@@ -99,13 +129,52 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i974.Logger>(),
       ),
     );
+    gh.factory<_i717.DisputeRemoteDataSource>(
+      () =>
+          _i717.DisputeRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
+    );
+    gh.factory<_i466.UserRemoteDataSource>(
+      () => _i466.UserRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
+    );
+    gh.factory<_i75.HomeRemoteDataSource>(
+      () => _i75.HomeRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
+    );
     gh.singleton<_i393.DioClient>(
       () => registerModule.dioClient(gh<_i361.Dio>()),
     );
-    gh.factory<_i717.DisputeRemoteDataSource>(
-      () => _i717.DisputeRemoteDataSourceImpl(gh<_i393.DioClient>()),
+    gh.factory<_i869.LetterRemoteDataSource>(
+      () => _i869.LetterRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
     );
-    gh.factory<_i824.HomeBloc>(() => _i824.HomeBloc(gh<_i489.GetHomeData>()));
+    gh.factory<_i718.TenantRemoteDataSource>(
+      () => _i718.TenantRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
+    );
+    gh.factory<_i1023.EvidenceRemoteDataSource>(
+      () => _i1023.EvidenceRemoteDataSourceImpl(
+        gh<_i816.CloudFunctionsService>(),
+      ),
+    );
+    gh.factory<_i391.ConsumerRemoteDataSource>(
+      () =>
+          _i391.ConsumerRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
+    );
+    gh.singleton<_i59.AuthBloc>(
+      () => _i59.AuthBloc(gh<_i781.FirebaseAuthService>()),
+    );
+    gh.factory<_i66.HomeRepository>(
+      () => _i6.HomeRepositoryImpl(gh<_i75.HomeRemoteDataSource>()),
+    );
+    gh.factory<_i597.TenantRepository>(
+      () => _i878.TenantRepositoryImpl(
+        gh<_i718.TenantRemoteDataSource>(),
+        gh<_i6.NetworkInfo>(),
+      ),
+    );
+    gh.factory<_i572.UserRepository>(
+      () => _i712.UserRepositoryImpl(
+        gh<_i466.UserRemoteDataSource>(),
+        gh<_i6.NetworkInfo>(),
+      ),
+    );
     gh.factory<_i328.DisputeRepository>(
       () => _i1061.DisputeRepositoryImpl(
         gh<_i717.DisputeRemoteDataSource>(),
@@ -118,6 +187,31 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i627.GetDisputes>(
       () => _i627.GetDisputes(gh<_i328.DisputeRepository>()),
     );
+    gh.factory<_i489.GetHomeData>(
+      () => _i489.GetHomeData(gh<_i66.HomeRepository>()),
+    );
+    gh.factory<_i236.ConsumerRepository>(
+      () => _i677.ConsumerRepositoryImpl(
+        gh<_i391.ConsumerRemoteDataSource>(),
+        gh<_i6.NetworkInfo>(),
+      ),
+    );
+    gh.factory<_i887.LetterRepository>(
+      () => _i639.LetterRepositoryImpl(
+        gh<_i869.LetterRemoteDataSource>(),
+        gh<_i6.NetworkInfo>(),
+      ),
+    );
+    gh.factory<_i211.EvidenceRepository>(
+      () => _i282.EvidenceRepositoryImpl(
+        gh<_i1023.EvidenceRemoteDataSource>(),
+        gh<_i6.NetworkInfo>(),
+      ),
+    );
+    gh.factory<_i130.GetConsumers>(
+      () => _i130.GetConsumers(gh<_i236.ConsumerRepository>()),
+    );
+    gh.factory<_i824.HomeBloc>(() => _i824.HomeBloc(gh<_i489.GetHomeData>()));
     gh.factory<_i689.DisputeOverviewBloc>(
       () => _i689.DisputeOverviewBloc(
         gh<_i620.GetDisputeMetrics>(),

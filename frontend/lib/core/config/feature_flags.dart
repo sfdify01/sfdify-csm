@@ -1,6 +1,7 @@
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:injectable/injectable.dart';
 import 'package:logger/logger.dart';
+import 'package:sfdify_scm/core/config/firebase_config.dart';
 
 /// Feature flag service using Firebase Remote Config.
 ///
@@ -12,10 +13,16 @@ import 'package:logger/logger.dart';
 /// - Enable per module with percentage-based rollout
 /// - Increase rollout gradually: 5% → 25% → 50% → 100%
 /// - Instant rollback by setting percentage to 0
+///
+/// Note: In emulator mode, all Firebase features are enabled by default
+/// since Remote Config doesn't have an emulator.
 @singleton
 class FeatureFlags {
   final FirebaseRemoteConfig _remoteConfig;
   final Logger _logger;
+
+  /// In emulator mode, bypass Remote Config and use hardcoded values
+  final bool _isEmulatorMode = FirebaseConfig.useEmulator;
 
   FeatureFlags(
     this._remoteConfig,
@@ -24,6 +31,14 @@ class FeatureFlags {
 
   /// Initialize Remote Config with defaults and fetch latest values.
   Future<void> initialize() async {
+    // In emulator mode, skip Remote Config (no emulator available)
+    // All Firebase features are enabled by default
+    if (_isEmulatorMode) {
+      _logger.i('Feature flags: Emulator mode - all Firebase features enabled');
+      _logCurrentFlags();
+      return;
+    }
+
     try {
       // Set configuration settings
       await _remoteConfig.setConfigSettings(
@@ -33,7 +48,7 @@ class FeatureFlags {
         ),
       );
 
-      // Set default values (all Firebase features disabled initially)
+      // Set default values (used when Remote Config fetch fails)
       await _remoteConfig.setDefaults({
         'use_firebase_auth': false,
         'use_firebase_disputes': false,
@@ -59,6 +74,7 @@ class FeatureFlags {
   /// When false: Use existing Django JWT authentication
   /// When true: Use Firebase Authentication with custom claims
   bool get useFirebaseAuth {
+    if (_isEmulatorMode) return true;
     return _remoteConfig.getBool('use_firebase_auth');
   }
 
@@ -67,16 +83,19 @@ class FeatureFlags {
   /// When false: Use Django REST API endpoints
   /// When true: Use Firebase Cloud Functions
   bool get useFirebaseForDisputes {
+    if (_isEmulatorMode) return true;
     return _remoteConfig.getBool('use_firebase_disputes');
   }
 
   /// Whether to use Firebase backend for consumers module.
   bool get useFirebaseForConsumers {
+    if (_isEmulatorMode) return true;
     return _remoteConfig.getBool('use_firebase_consumers');
   }
 
   /// Whether to use Firebase backend for letters module.
   bool get useFirebaseForLetters {
+    if (_isEmulatorMode) return true;
     return _remoteConfig.getBool('use_firebase_letters');
   }
 
@@ -89,6 +108,7 @@ class FeatureFlags {
   /// - 50: 50% of users on Firebase
   /// - 100: All users on Firebase
   int get firebaseRolloutPercentage {
+    if (_isEmulatorMode) return 100;
     final value = _remoteConfig.getInt('firebase_rollout_pct');
     return value.clamp(0, 100);
   }
@@ -98,6 +118,7 @@ class FeatureFlags {
   /// Used for testing specific users regardless of percentage.
   /// Format: "userId1,userId2,userId3"
   String get firebaseUserWhitelist {
+    if (_isEmulatorMode) return '';
     return _remoteConfig.getString('firebase_user_whitelist');
   }
 
@@ -177,8 +198,9 @@ class FeatureFlags {
 
   /// Log current flag values for debugging.
   void _logCurrentFlags() {
+    final mode = _isEmulatorMode ? ' (EMULATOR MODE)' : '';
     _logger.d('''
-Feature Flags:
+Feature Flags$mode:
   - use_firebase_auth: $useFirebaseAuth
   - use_firebase_disputes: $useFirebaseForDisputes
   - use_firebase_consumers: $useFirebaseForConsumers

@@ -1,0 +1,150 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ========================================================================
+    // HELPER FUNCTIONS
+    // ========================================================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Get tenant ID from custom claims
+    function getTenantId() {
+      return request.auth.token.tenantId;
+    }
+
+    // Get user role from custom claims
+    function getRole() {
+      return request.auth.token.role;
+    }
+
+    // Check if user has one of the specified roles
+    function hasRole(allowedRoles) {
+      return isAuthenticated() && getRole() in allowedRoles;
+    }
+
+    // Check if user can read (any authenticated role)
+    function canRead() {
+      return hasRole(['owner', 'operator', 'viewer', 'auditor']);
+    }
+
+    // Check if user can write (owner or operator)
+    function canWrite() {
+      return hasRole(['owner', 'operator']);
+    }
+
+    // Validate file size (max 10MB)
+    function isValidFileSize() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Validate file content type
+    function isValidContentType() {
+      return request.resource.contentType.matches('application/pdf')
+        || request.resource.contentType.matches('image/.*')
+        || request.resource.contentType.matches('application/msword')
+        || request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.*');
+    }
+
+    // ========================================================================
+    // LETTERS BUCKET - Generated PDFs
+    // sfdify-letters/{tenantId}/{disputeId}/{letterId}.pdf
+    // ========================================================================
+
+    match /sfdify-letters/{tenantId}/{allPaths=**} {
+      // Users can read letters from their tenant
+      allow read: if isAuthenticated()
+        && getTenantId() == tenantId
+        && canRead();
+
+      // Only Cloud Functions write letters (via admin SDK)
+      allow write: if false;
+    }
+
+    // ========================================================================
+    // EVIDENCE BUCKET - Uploaded evidence files
+    // sfdify-evidence/{tenantId}/{disputeId}/{evidenceId}/{filename}
+    // ========================================================================
+
+    match /sfdify-evidence/{tenantId}/{disputeId}/{evidenceId}/{filename} {
+      // Users can read evidence from their tenant
+      allow read: if isAuthenticated()
+        && getTenantId() == tenantId
+        && canRead();
+
+      // Evidence upload goes through Cloud Functions for virus scanning
+      // Direct uploads are not allowed
+      allow write: if false;
+    }
+
+    // ========================================================================
+    // TEMPLATES BUCKET - Tenant branding assets
+    // sfdify-templates/{tenantId}/branding/{filename}
+    // ========================================================================
+
+    match /sfdify-templates/{tenantId}/branding/{filename} {
+      // Users can read branding from their tenant
+      allow read: if isAuthenticated()
+        && getTenantId() == tenantId
+        && canRead();
+
+      // Owners can upload branding assets
+      allow write: if isAuthenticated()
+        && getTenantId() == tenantId
+        && hasRole(['owner'])
+        && isValidFileSize()
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // ========================================================================
+    // EXPORTS BUCKET - Audit exports, CFPB packages
+    // sfdify-exports/{tenantId}/{exportId}/{filename}
+    // ========================================================================
+
+    match /sfdify-exports/{tenantId}/{allPaths=**} {
+      // Only owners and auditors can read exports
+      allow read: if isAuthenticated()
+        && getTenantId() == tenantId
+        && hasRole(['owner', 'auditor']);
+
+      // Only Cloud Functions generate exports
+      allow write: if false;
+    }
+
+    // ========================================================================
+    // TEMP UPLOADS - Temporary storage for processing
+    // temp/{tenantId}/{userId}/{filename}
+    // ========================================================================
+
+    match /temp/{tenantId}/{userId}/{filename} {
+      // Users can upload to their temp folder
+      allow read: if isAuthenticated()
+        && getTenantId() == tenantId
+        && request.auth.uid == userId;
+
+      // Operators and owners can upload temp files
+      allow write: if isAuthenticated()
+        && getTenantId() == tenantId
+        && request.auth.uid == userId
+        && canWrite()
+        && isValidFileSize()
+        && isValidContentType();
+
+      // Allow deletion of own temp files
+      allow delete: if isAuthenticated()
+        && getTenantId() == tenantId
+        && request.auth.uid == userId;
+    }
+
+    // ========================================================================
+    // DEFAULT: DENY ALL OTHER ACCESS
+    // ========================================================================
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

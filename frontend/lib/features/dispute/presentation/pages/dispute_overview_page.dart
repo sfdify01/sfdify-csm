@@ -422,34 +422,16 @@ class DisputeOverviewView extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Showing 1-${state.disputes.length} of ${state.disputes.length} results',
+          'Showing ${state.disputes.length} results',
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        Row(
-          children: [
-            TextButton(
-              onPressed: state.currentPage > 1
-                  ? () => context
-                      .read<DisputeOverviewBloc>()
-                      .add(
-                        DisputeOverviewPageChanged(state.currentPage - 1),
-                      )
-                  : null,
-              child: const Text('Prev'),
-            ),
-            const Gap(8),
-            TextButton(
-              onPressed: state.currentPage < state.totalPages
-                  ? () => context
-                      .read<DisputeOverviewBloc>()
-                      .add(
-                        DisputeOverviewPageChanged(state.currentPage + 1),
-                      )
-                  : null,
-              child: const Text('Next'),
-            ),
-          ],
-        ),
+        if (state.hasMore)
+          TextButton(
+            onPressed: () => context
+                .read<DisputeOverviewBloc>()
+                .add(const DisputeOverviewLoadMore()),
+            child: const Text('Load More'),
+          ),
       ],
     );
   }

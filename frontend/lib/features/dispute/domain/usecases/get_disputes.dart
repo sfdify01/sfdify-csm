@@ -19,7 +19,8 @@ class GetDisputes implements UseCase<List<DisputeEntity>, GetDisputesParams> {
     return _repository.getDisputes(
       bureau: params.bureau,
       status: params.status,
-      page: params.page,
+      limit: params.limit,
+      cursor: params.cursor,
     );
   }
 }
@@ -27,14 +28,16 @@ class GetDisputes implements UseCase<List<DisputeEntity>, GetDisputesParams> {
 class GetDisputesParams extends Equatable {
   final String? bureau;
   final String? status;
-  final int page;
+  final int? limit;
+  final String? cursor;
 
   const GetDisputesParams({
     this.bureau,
     this.status,
-    this.page = 1,
+    this.limit,
+    this.cursor,
   });
 
   @override
-  List<Object?> get props => [bureau, status, page];
+  List<Object?> get props => [bureau, status, limit, cursor];
 }

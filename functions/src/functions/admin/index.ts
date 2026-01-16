@@ -1,0 +1,950 @@
+/**
+ * Admin & Analytics Cloud Functions
+ *
+ * Handles analytics, billing, audit logs, and data export.
+ * Provides dashboard metrics and compliance reporting.
+ */
+
+import * as functions from "firebase-functions";
+import { db } from "../../admin";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import {
+  withAuth,
+  RequestContext,
+  requireRole,
+} from "../../middleware/auth";
+import {
+  validate,
+  paginationSchema,
+  schemas,
+} from "../../utils/validation";
+import {
+  withErrorHandling,
+  AppError,
+  ErrorCode,
+} from "../../utils/errors";
+import { logAuditEvent } from "../../utils/audit";
+import {
+  ApiResponse,
+  PaginatedResponse,
+  AuditLog,
+  DisputeStatus,
+  LetterStatus,
+  Bureau,
+} from "../../types";
+import Joi from "joi";
+
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+interface DisputeAnalytics {
+  overview: {
+    total: number;
+    active: number;
+    resolved: number;
+    closed: number;
+  };
+  byStatus: Record<DisputeStatus, number>;
+  byBureau: Record<Bureau, number>;
+  byType: Record<string, number>;
+  resolution: {
+    successRate: number;
+    averageResolutionDays: number;
+    pendingOverSla: number;
+  };
+  trends: {
+    period: string;
+    created: number;
+    resolved: number;
+  }[];
+}
+
+interface LetterAnalytics {
+  overview: {
+    total: number;
+    sent: number;
+    delivered: number;
+    returned: number;
+  };
+  byStatus: Record<LetterStatus, number>;
+  byMailType: Record<string, number>;
+  costs: {
+    totalSpent: number;
+    averageCost: number;
+    currency: string;
+  };
+  deliveryMetrics: {
+    deliveryRate: number;
+    averageDeliveryDays: number;
+    returnedRate: number;
+  };
+}
+
+interface BillingUsage {
+  period: {
+    start: string;
+    end: string;
+  };
+  usage: {
+    letters: {
+      uspsFirstClass: number;
+      uspsCertified: number;
+      uspsCertifiedReturnReceipt: number;
+      total: number;
+    };
+    disputes: {
+      created: number;
+      resolved: number;
+    };
+    consumers: {
+      active: number;
+      new: number;
+    };
+    storage: {
+      usedBytes: number;
+      limitBytes: number;
+    };
+    apiCalls: number;
+  };
+  costs: {
+    letters: number;
+    subscription: number;
+    overage: number;
+    total: number;
+    currency: string;
+  };
+  plan: string;
+}
+
+interface AuditLogFilters {
+  entity?: string;
+  entityId?: string;
+  action?: string;
+  actorId?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+interface ExportDataInput {
+  type: "disputes" | "letters" | "consumers" | "audit_logs";
+  format: "json" | "csv";
+  startDate?: string;
+  endDate?: string;
+  filters?: Record<string, unknown>;
+}
+
+interface ExportResult {
+  exportId: string;
+  type: string;
+  format: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  downloadUrl?: string;
+  recordCount?: number;
+  createdAt: Timestamp | FieldValue;
+  completedAt?: Timestamp;
+  expiresAt?: Timestamp;
+}
+
+// ============================================================================
+// Validation Schemas
+// ============================================================================
+
+const analyticsDateRangeSchema = Joi.object({
+  startDate: schemas.date,
+  endDate: schemas.date,
+  granularity: Joi.string().valid("day", "week", "month").default("day"),
+}).and("startDate", "endDate");
+
+const auditLogFilterSchema = Joi.object({
+  entity: Joi.string().valid(
+    "user", "tenant", "consumer", "dispute", "letter", "evidence", "template"
+  ),
+  entityId: schemas.documentId,
+  action: Joi.string().valid(
+    "create", "read", "update", "delete", "auto_close", "status_change",
+    "login", "logout", "export", "send", "approve", "reject",
+    "upload", "download", "connect", "disconnect", "refresh"
+  ),
+  actorId: schemas.documentId,
+  startDate: schemas.date,
+  endDate: schemas.date,
+});
+
+const exportDataSchema = Joi.object({
+  type: Joi.string().valid("disputes", "letters", "consumers", "audit_logs").required(),
+  format: Joi.string().valid("json", "csv").default("json"),
+  startDate: schemas.date,
+  endDate: schemas.date,
+  filters: Joi.object(),
+});
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Calculate date range for analytics queries
+ */
+function getDateRange(startDate?: string, endDate?: string): { start: Date; end: Date } {
+  const end = endDate ? new Date(endDate) : new Date();
+  end.setHours(23, 59, 59, 999);
+
+  const start = startDate ? new Date(startDate) : new Date(end);
+  if (!startDate) {
+    start.setDate(start.getDate() - 30); // Default to last 30 days
+  }
+  start.setHours(0, 0, 0, 0);
+
+  return { start, end };
+}
+
+/**
+ * Generate trend data by grouping counts per period
+ */
+function generateTrends(
+  docs: FirebaseFirestore.QueryDocumentSnapshot[],
+  dateField: string,
+  granularity: "day" | "week" | "month" = "day"
+): { period: string; count: number }[] {
+  const counts: Record<string, number> = {};
+
+  docs.forEach((doc) => {
+    const data = doc.data();
+    const timestamp = data[dateField] as Timestamp;
+    if (!timestamp) return;
+
+    const date = timestamp.toDate();
+    let key: string;
+
+    if (granularity === "month") {
+      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    } else if (granularity === "week") {
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay());
+      key = weekStart.toISOString().split("T")[0];
+    } else {
+      key = date.toISOString().split("T")[0];
+    }
+
+    counts[key] = (counts[key] || 0) + 1;
+  });
+
+  return Object.entries(counts)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([period, count]) => ({ period, count }));
+}
+
+// ============================================================================
+// adminAnalyticsDisputes - Get dispute analytics
+// ============================================================================
+
+async function analyticsDisputesHandler(
+  data: { startDate?: string; endDate?: string; granularity?: string },
+  context: RequestContext
+): Promise<ApiResponse<DisputeAnalytics>> {
+  const { tenantId } = context;
+
+  // Validate input
+  const validatedData = validate(analyticsDateRangeSchema, data);
+  const { start, end } = getDateRange(validatedData.startDate, validatedData.endDate);
+
+  // Get all disputes for the tenant within date range
+  const disputesSnapshot = await db
+    .collection("disputes")
+    .where("tenantId", "==", tenantId)
+    .where("timestamps.createdAt", ">=", Timestamp.fromDate(start))
+    .where("timestamps.createdAt", "<=", Timestamp.fromDate(end))
+    .get();
+
+  // Initialize counters
+  const byStatus: Record<string, number> = {};
+  const byBureau: Record<string, number> = {};
+  const byType: Record<string, number> = {};
+  let totalResolutionDays = 0;
+  let resolvedCount = 0;
+
+  // Process disputes
+  disputesSnapshot.docs.forEach((doc) => {
+    const dispute = doc.data();
+
+    // Count by status
+    byStatus[dispute.status] = (byStatus[dispute.status] || 0) + 1;
+
+    // Count by bureau
+    byBureau[dispute.bureau] = (byBureau[dispute.bureau] || 0) + 1;
+
+    // Count by type
+    byType[dispute.type] = (byType[dispute.type] || 0) + 1;
+
+    // Calculate resolution time for resolved disputes
+    if (dispute.status === "resolved" && dispute.timestamps?.resolvedAt) {
+      const createdAt = (dispute.timestamps.createdAt as Timestamp).toDate();
+      const resolvedAt = (dispute.timestamps.resolvedAt as Timestamp).toDate();
+      const days = Math.ceil((resolvedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+      totalResolutionDays += days;
+      resolvedCount++;
+    }
+  });
+
+  // Calculate overview counts
+  const total = disputesSnapshot.size;
+  const activeStatuses = ["draft", "pending_review", "approved", "mailed", "delivered", "bureau_investigating"];
+  const active = disputesSnapshot.docs.filter((d) => activeStatuses.includes(d.data().status)).length;
+  const resolved = byStatus["resolved"] || 0;
+  const closed = byStatus["closed"] || 0;
+
+  // Count pending over SLA
+  const now = new Date();
+  const pendingOverSla = disputesSnapshot.docs.filter((doc) => {
+    const data = doc.data();
+    if (data.status === "resolved" || data.status === "closed") return false;
+    const dueAt = data.timestamps?.dueAt as Timestamp;
+    return dueAt && dueAt.toDate() < now;
+  }).length;
+
+  // Generate trends
+  const createdTrends = generateTrends(
+    disputesSnapshot.docs,
+    "timestamps.createdAt",
+    validatedData.granularity as "day" | "week" | "month"
+  );
+
+  // Get resolved disputes for trends
+  const resolvedSnapshot = await db
+    .collection("disputes")
+    .where("tenantId", "==", tenantId)
+    .where("timestamps.resolvedAt", ">=", Timestamp.fromDate(start))
+    .where("timestamps.resolvedAt", "<=", Timestamp.fromDate(end))
+    .get();
+
+  const resolvedTrends = generateTrends(
+    resolvedSnapshot.docs,
+    "timestamps.resolvedAt",
+    validatedData.granularity as "day" | "week" | "month"
+  );
+
+  // Merge trends
+  const allPeriods = new Set([
+    ...createdTrends.map((t) => t.period),
+    ...resolvedTrends.map((t) => t.period),
+  ]);
+
+  const trends = Array.from(allPeriods)
+    .sort()
+    .map((period) => ({
+      period,
+      created: createdTrends.find((t) => t.period === period)?.count || 0,
+      resolved: resolvedTrends.find((t) => t.period === period)?.count || 0,
+    }));
+
+  return {
+    success: true,
+    data: {
+      overview: {
+        total,
+        active,
+        resolved,
+        closed,
+      },
+      byStatus: byStatus as Record<DisputeStatus, number>,
+      byBureau: byBureau as Record<Bureau, number>,
+      byType,
+      resolution: {
+        successRate: total > 0 ? (resolved / total) * 100 : 0,
+        averageResolutionDays: resolvedCount > 0 ? Math.round(totalResolutionDays / resolvedCount) : 0,
+        pendingOverSla,
+      },
+      trends,
+    },
+  };
+}
+
+export const adminAnalyticsDisputes = functions.https.onCall(
+  withErrorHandling(
+    withAuth(["analytics:read"], analyticsDisputesHandler)
+  )
+);
+
+// ============================================================================
+// adminAnalyticsLetters - Get letter analytics
+// ============================================================================
+
+async function analyticsLettersHandler(
+  data: { startDate?: string; endDate?: string; granularity?: string },
+  context: RequestContext
+): Promise<ApiResponse<LetterAnalytics>> {
+  const { tenantId } = context;
+
+  // Validate input
+  const validatedData = validate(analyticsDateRangeSchema, data);
+  const { start, end } = getDateRange(validatedData.startDate, validatedData.endDate);
+
+  // Get all letters for the tenant within date range
+  const lettersSnapshot = await db
+    .collection("letters")
+    .where("tenantId", "==", tenantId)
+    .where("createdAt", ">=", Timestamp.fromDate(start))
+    .where("createdAt", "<=", Timestamp.fromDate(end))
+    .get();
+
+  // Initialize counters
+  const byStatus: Record<string, number> = {};
+  const byMailType: Record<string, number> = {};
+  let totalCost = 0;
+  let deliveredCount = 0;
+  let totalDeliveryDays = 0;
+
+  // Process letters
+  lettersSnapshot.docs.forEach((doc) => {
+    const letter = doc.data();
+
+    // Count by status
+    byStatus[letter.status] = (byStatus[letter.status] || 0) + 1;
+
+    // Count by mail type
+    byMailType[letter.mailType] = (byMailType[letter.mailType] || 0) + 1;
+
+    // Sum costs
+    if (letter.cost?.total) {
+      totalCost += letter.cost.total;
+    }
+
+    // Calculate delivery time
+    if (letter.status === "delivered" && letter.sentAt && letter.deliveredAt) {
+      const sentAt = (letter.sentAt as Timestamp).toDate();
+      const deliveredAt = (letter.deliveredAt as Timestamp).toDate();
+      const days = Math.ceil((deliveredAt.getTime() - sentAt.getTime()) / (1000 * 60 * 60 * 24));
+      totalDeliveryDays += days;
+      deliveredCount++;
+    }
+  });
+
+  // Calculate overview counts
+  const total = lettersSnapshot.size;
+  const sent = lettersSnapshot.docs.filter((d) =>
+    ["sent", "in_transit", "delivered", "returned_to_sender"].includes(d.data().status)
+  ).length;
+  const delivered = byStatus["delivered"] || 0;
+  const returned = byStatus["returned_to_sender"] || 0;
+
+  return {
+    success: true,
+    data: {
+      overview: {
+        total,
+        sent,
+        delivered,
+        returned,
+      },
+      byStatus: byStatus as Record<LetterStatus, number>,
+      byMailType,
+      costs: {
+        totalSpent: totalCost,
+        averageCost: total > 0 ? totalCost / total : 0,
+        currency: "USD",
+      },
+      deliveryMetrics: {
+        deliveryRate: sent > 0 ? (delivered / sent) * 100 : 0,
+        averageDeliveryDays: deliveredCount > 0 ? Math.round(totalDeliveryDays / deliveredCount) : 0,
+        returnedRate: sent > 0 ? (returned / sent) * 100 : 0,
+      },
+    },
+  };
+}
+
+export const adminAnalyticsLetters = functions.https.onCall(
+  withErrorHandling(
+    withAuth(["analytics:read"], analyticsLettersHandler)
+  )
+);
+
+// ============================================================================
+// adminBillingUsage - Get billing usage for tenant
+// ============================================================================
+
+async function billingUsageHandler(
+  data: { month?: string },
+  context: RequestContext
+): Promise<ApiResponse<BillingUsage>> {
+  const { tenantId, tenant } = context;
+
+  // Determine billing period
+  const now = new Date();
+  let periodStart: Date;
+  let periodEnd: Date;
+
+  if (data.month) {
+    const [year, month] = data.month.split("-").map(Number);
+    periodStart = new Date(year, month - 1, 1);
+    periodEnd = new Date(year, month, 0, 23, 59, 59, 999);
+  } else {
+    // Current month
+    periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  }
+
+  // Get letter counts by mail type
+  const lettersSnapshot = await db
+    .collection("letters")
+    .where("tenantId", "==", tenantId)
+    .where("sentAt", ">=", Timestamp.fromDate(periodStart))
+    .where("sentAt", "<=", Timestamp.fromDate(periodEnd))
+    .get();
+
+  const letterCounts = {
+    uspsFirstClass: 0,
+    uspsCertified: 0,
+    uspsCertifiedReturnReceipt: 0,
+    total: lettersSnapshot.size,
+  };
+
+  let letterCosts = 0;
+
+  lettersSnapshot.docs.forEach((doc) => {
+    const letter = doc.data();
+    if (letter.mailType === "usps_first_class") letterCounts.uspsFirstClass++;
+    else if (letter.mailType === "usps_certified") letterCounts.uspsCertified++;
+    else if (letter.mailType === "usps_certified_return_receipt") letterCounts.uspsCertifiedReturnReceipt++;
+
+    if (letter.cost?.total) letterCosts += letter.cost.total;
+  });
+
+  // Get dispute counts
+  const disputesCreatedSnapshot = await db
+    .collection("disputes")
+    .where("tenantId", "==", tenantId)
+    .where("timestamps.createdAt", ">=", Timestamp.fromDate(periodStart))
+    .where("timestamps.createdAt", "<=", Timestamp.fromDate(periodEnd))
+    .count()
+    .get();
+
+  const disputesResolvedSnapshot = await db
+    .collection("disputes")
+    .where("tenantId", "==", tenantId)
+    .where("timestamps.resolvedAt", ">=", Timestamp.fromDate(periodStart))
+    .where("timestamps.resolvedAt", "<=", Timestamp.fromDate(periodEnd))
+    .count()
+    .get();
+
+  // Get consumer counts
+  const activeConsumersSnapshot = await db
+    .collection("consumers")
+    .where("tenantId", "==", tenantId)
+    .where("disabled", "==", false)
+    .count()
+    .get();
+
+  const newConsumersSnapshot = await db
+    .collection("consumers")
+    .where("tenantId", "==", tenantId)
+    .where("createdAt", ">=", Timestamp.fromDate(periodStart))
+    .where("createdAt", "<=", Timestamp.fromDate(periodEnd))
+    .count()
+    .get();
+
+  // Get storage usage (sum of evidence file sizes)
+  const evidenceSnapshot = await db
+    .collection("evidence")
+    .where("tenantId", "==", tenantId)
+    .get();
+
+  const storageUsed = evidenceSnapshot.docs.reduce((total, doc) => {
+    return total + (doc.data().fileSize || 0);
+  }, 0);
+
+  // Calculate subscription cost based on plan
+  const planPricing: Record<string, number> = {
+    starter: 99,
+    professional: 299,
+    enterprise: 999,
+  };
+
+  const storageLimits: Record<string, number> = {
+    starter: 5 * 1024 * 1024 * 1024, // 5GB
+    professional: 25 * 1024 * 1024 * 1024, // 25GB
+    enterprise: 100 * 1024 * 1024 * 1024, // 100GB
+  };
+
+  const subscriptionCost = planPricing[tenant.plan] || 99;
+  const storageLimit = storageLimits[tenant.plan] || storageLimits.starter;
+
+  // Calculate overage costs
+  let overageCost = 0;
+  if (storageUsed > storageLimit) {
+    const overageGB = (storageUsed - storageLimit) / (1024 * 1024 * 1024);
+    overageCost = Math.ceil(overageGB) * 5; // $5 per GB overage
+  }
+
+  return {
+    success: true,
+    data: {
+      period: {
+        start: periodStart.toISOString().split("T")[0],
+        end: periodEnd.toISOString().split("T")[0],
+      },
+      usage: {
+        letters: letterCounts,
+        disputes: {
+          created: disputesCreatedSnapshot.data().count,
+          resolved: disputesResolvedSnapshot.data().count,
+        },
+        consumers: {
+          active: activeConsumersSnapshot.data().count,
+          new: newConsumersSnapshot.data().count,
+        },
+        storage: {
+          usedBytes: storageUsed,
+          limitBytes: storageLimit,
+        },
+        apiCalls: 0, // Would need request logging to track this
+      },
+      costs: {
+        letters: letterCosts,
+        subscription: subscriptionCost,
+        overage: overageCost,
+        total: letterCosts + subscriptionCost + overageCost,
+        currency: "USD",
+      },
+      plan: tenant.plan,
+    },
+  };
+}
+
+export const adminBillingUsage = functions.https.onCall(
+  withErrorHandling(
+    withAuth(["billing:read"], billingUsageHandler)
+  )
+);
+
+// ============================================================================
+// adminAuditLogs - List audit logs
+// ============================================================================
+
+async function auditLogsHandler(
+  data: AuditLogFilters,
+  context: RequestContext
+): Promise<PaginatedResponse<AuditLog>> {
+  const { tenantId } = context;
+
+  // Validate pagination and filters
+  const pagination = validate(paginationSchema, data);
+  const filters = validate(auditLogFilterSchema, data);
+
+  // Build query
+  let query = db
+    .collection("auditLogs")
+    .where("tenantId", "==", tenantId)
+    .orderBy("timestamp", "desc");
+
+  // Apply filters
+  if (filters.entity) {
+    query = query.where("entity", "==", filters.entity);
+  }
+
+  if (filters.entityId) {
+    query = query.where("entityId", "==", filters.entityId);
+  }
+
+  if (filters.action) {
+    query = query.where("action", "==", filters.action);
+  }
+
+  if (filters.actorId) {
+    query = query.where("actor.userId", "==", filters.actorId);
+  }
+
+  // Date range filter
+  if (filters.startDate && filters.endDate) {
+    const { start, end } = getDateRange(filters.startDate, filters.endDate);
+    query = query
+      .where("timestamp", ">=", Timestamp.fromDate(start))
+      .where("timestamp", "<=", Timestamp.fromDate(end));
+  }
+
+  // Apply cursor
+  if (pagination.cursor) {
+    const cursorDoc = await db.collection("auditLogs").doc(pagination.cursor).get();
+    if (cursorDoc.exists) {
+      query = query.startAfter(cursorDoc);
+    }
+  }
+
+  // Execute query
+  const snapshot = await query.limit(pagination.limit + 1).get();
+
+  const hasMore = snapshot.docs.length > pagination.limit;
+  const docs = hasMore ? snapshot.docs.slice(0, -1) : snapshot.docs;
+
+  const logs = docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  } as AuditLog));
+
+  // Get total count
+  let countQuery = db
+    .collection("auditLogs")
+    .where("tenantId", "==", tenantId);
+
+  if (filters.entity) {
+    countQuery = countQuery.where("entity", "==", filters.entity);
+  }
+
+  const countSnapshot = await countQuery.count().get();
+
+  return {
+    success: true,
+    data: {
+      items: logs,
+      pagination: {
+        total: countSnapshot.data().count,
+        limit: pagination.limit,
+        hasMore,
+        nextCursor: hasMore ? docs[docs.length - 1].id : undefined,
+      },
+    },
+  };
+}
+
+export const adminAuditLogs = functions.https.onCall(
+  withErrorHandling(
+    withAuth(["audit:read"], auditLogsHandler)
+  )
+);
+
+// ============================================================================
+// adminExportData - Export data for FCRA compliance
+// ============================================================================
+
+async function exportDataHandler(
+  data: ExportDataInput,
+  context: RequestContext
+): Promise<ApiResponse<ExportResult>> {
+  const { tenantId, userId: actorId, email: actorEmail, role: actorRole, ip, userAgent } = context;
+
+  // Only owners and auditors can export data
+  requireRole(context, ["owner", "auditor"]);
+
+  // Validate input
+  const validatedData = validate(exportDataSchema, data);
+
+  // Create export record
+  const exportId = `export_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const now = FieldValue.serverTimestamp() as unknown as Timestamp;
+
+  const exportRecord: ExportResult = {
+    exportId,
+    type: validatedData.type,
+    format: validatedData.format,
+    status: "pending",
+    createdAt: now,
+  };
+
+  await db.collection("exports").doc(exportId).set({
+    ...exportRecord,
+    tenantId,
+    requestedBy: actorId,
+    filters: validatedData.filters || {},
+    startDate: validatedData.startDate,
+    endDate: validatedData.endDate,
+  });
+
+  // Note: Actual export processing would be handled by a background function
+  // triggered by the document creation. Here we just return the pending record.
+
+  // Audit log
+  await logAuditEvent({
+    tenantId,
+    actor: { userId: actorId, email: actorEmail, role: actorRole, ip, userAgent },
+    entity: "export",
+    entityId: exportId,
+    action: "export",
+    newState: {
+      type: validatedData.type,
+      format: validatedData.format,
+      filters: validatedData.filters,
+    },
+    metadata: {
+      reason: "FCRA compliance export",
+    },
+  });
+
+  return {
+    success: true,
+    data: exportRecord,
+  };
+}
+
+export const adminExportData = functions.https.onCall(
+  withErrorHandling(
+    withAuth(["data:export"], exportDataHandler)
+  )
+);
+
+// ============================================================================
+// adminGetExportStatus - Check export status
+// ============================================================================
+
+interface GetExportStatusInput {
+  exportId: string;
+}
+
+async function getExportStatusHandler(
+  data: GetExportStatusInput,
+  context: RequestContext
+): Promise<ApiResponse<ExportResult>> {
+  const { tenantId } = context;
+
+  // Validate input
+  const validatedData = validate(
+    Joi.object({ exportId: Joi.string().required() }),
+    data
+  );
+
+  // Get export record
+  const exportDoc = await db.collection("exports").doc(validatedData.exportId).get();
+
+  if (!exportDoc.exists) {
+    throw new AppError(
+      ErrorCode.NOT_FOUND,
+      `Export ${validatedData.exportId} not found`,
+      404
+    );
+  }
+
+  const exportData = exportDoc.data()!;
+
+  // Verify tenant access
+  if (exportData.tenantId !== tenantId) {
+    throw new AppError(
+      ErrorCode.NOT_FOUND,
+      `Export ${validatedData.exportId} not found`,
+      404
+    );
+  }
+
+  return {
+    success: true,
+    data: {
+      exportId: exportData.exportId,
+      type: exportData.type,
+      format: exportData.format,
+      status: exportData.status,
+      downloadUrl: exportData.downloadUrl,
+      recordCount: exportData.recordCount,
+      createdAt: exportData.createdAt,
+      completedAt: exportData.completedAt,
+      expiresAt: exportData.expiresAt,
+    },
+  };
+}
+
+export const adminGetExportStatus = functions.https.onCall(
+  withErrorHandling(
+    withAuth(["data:export"], getExportStatusHandler)
+  )
+);
+
+// ============================================================================
+// adminSystemHealth - Get system health metrics (internal use)
+// ============================================================================
+
+interface SystemHealth {
+  status: "healthy" | "degraded" | "unhealthy";
+  services: {
+    firestore: "up" | "down";
+    storage: "up" | "down";
+    auth: "up" | "down";
+  };
+  metrics: {
+    activeDisputes: number;
+    pendingLetters: number;
+    failedWebhooks: number;
+    overdueSlaCount: number;
+  };
+  lastChecked: Timestamp | FieldValue;
+}
+
+async function systemHealthHandler(
+  _data: unknown,
+  context: RequestContext
+): Promise<ApiResponse<SystemHealth>> {
+  const { tenantId } = context;
+
+  // Only owners can view system health
+  requireRole(context, ["owner"]);
+
+  // Check various health metrics
+  const now = new Date();
+
+  // Active disputes count
+  const activeDisputesSnapshot = await db
+    .collection("disputes")
+    .where("tenantId", "==", tenantId)
+    .where("status", "in", ["draft", "pending_review", "approved", "mailed", "delivered", "bureau_investigating"])
+    .count()
+    .get();
+
+  // Pending letters count
+  const pendingLettersSnapshot = await db
+    .collection("letters")
+    .where("tenantId", "==", tenantId)
+    .where("status", "in", ["draft", "pending_approval", "approved", "rendering", "ready", "queued"])
+    .count()
+    .get();
+
+  // Overdue SLA count
+  const overdueSnapshot = await db
+    .collection("disputes")
+    .where("tenantId", "==", tenantId)
+    .where("status", "not-in", ["resolved", "closed"])
+    .where("timestamps.dueAt", "<", Timestamp.fromDate(now))
+    .count()
+    .get();
+
+  // Failed webhooks in last 24 hours
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const failedWebhooksSnapshot = await db
+    .collection("webhookEvents")
+    .where("tenantId", "==", tenantId)
+    .where("status", "==", "failed")
+    .where("receivedAt", ">=", Timestamp.fromDate(yesterday))
+    .count()
+    .get();
+
+  // Determine overall health status
+  let status: "healthy" | "degraded" | "unhealthy" = "healthy";
+  if (overdueSnapshot.data().count > 10 || failedWebhooksSnapshot.data().count > 5) {
+    status = "degraded";
+  }
+  if (failedWebhooksSnapshot.data().count > 20) {
+    status = "unhealthy";
+  }
+
+  return {
+    success: true,
+    data: {
+      status,
+      services: {
+        firestore: "up",
+        storage: "up",
+        auth: "up",
+      },
+      metrics: {
+        activeDisputes: activeDisputesSnapshot.data().count,
+        pendingLetters: pendingLettersSnapshot.data().count,
+        failedWebhooks: failedWebhooksSnapshot.data().count,
+        overdueSlaCount: overdueSnapshot.data().count,
+      },
+      lastChecked: FieldValue.serverTimestamp(),
+    },
+  };
+}
+
+export const adminSystemHealth = functions.https.onCall(
+  withErrorHandling(
+    withAuth(["analytics:read"], systemHealthHandler)
+  )
+);

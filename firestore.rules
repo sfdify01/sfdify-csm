@@ -1,0 +1,394 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========================================================================
+    // HELPER FUNCTIONS
+    // ========================================================================
+
+    // Check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Get the tenant ID from the user's custom claims
+    function getTenantId() {
+      return request.auth.token.tenantId;
+    }
+
+    // Get the user's role from custom claims
+    function getRole() {
+      return request.auth.token.role;
+    }
+
+    // Check if the user has one of the specified roles
+    function hasRole(allowedRoles) {
+      return isAuthenticated() && getRole() in allowedRoles;
+    }
+
+    // Check if the user is an owner
+    function isOwner() {
+      return hasRole(['owner']);
+    }
+
+    // Check if the user is an operator or higher
+    function isOperatorOrHigher() {
+      return hasRole(['owner', 'operator']);
+    }
+
+    // Check if the user can read (any authenticated role)
+    function canRead() {
+      return hasRole(['owner', 'operator', 'viewer', 'auditor']);
+    }
+
+    // Check if the user can write (owner or operator)
+    function canWrite() {
+      return hasRole(['owner', 'operator']);
+    }
+
+    // Check if the user can audit (owner or auditor)
+    function canAudit() {
+      return hasRole(['owner', 'auditor']);
+    }
+
+    // Check if the resource belongs to the user's tenant
+    function isTenantMember() {
+      return resource.data.tenantId == getTenantId();
+    }
+
+    // Check if the incoming data is for the user's tenant
+    function isCreatingForTenant() {
+      return request.resource.data.tenantId == getTenantId();
+    }
+
+    // Check if the tenant ID is not being changed
+    function tenantIdUnchanged() {
+      return request.resource.data.tenantId == resource.data.tenantId;
+    }
+
+    // ========================================================================
+    // TENANTS COLLECTION
+    // ========================================================================
+
+    match /tenants/{tenantId} {
+      // Only owners can read their tenant
+      allow read: if isAuthenticated()
+        && getTenantId() == tenantId
+        && canRead();
+
+      // Only owners can update their tenant
+      allow update: if isAuthenticated()
+        && getTenantId() == tenantId
+        && isOwner();
+
+      // Tenant creation is done via Cloud Functions only
+      allow create: if false;
+
+      // Never allow tenant deletion from client
+      allow delete: if false;
+    }
+
+    // ========================================================================
+    // USERS COLLECTION
+    // ========================================================================
+
+    match /users/{userId} {
+      // Users can read other users in their tenant
+      allow read: if isAuthenticated()
+        && isTenantMember()
+        && canRead();
+
+      // Only owners can create users
+      allow create: if isAuthenticated()
+        && isCreatingForTenant()
+        && isOwner();
+
+      // Owners can update any user, operators can update viewers
+      allow update: if isAuthenticated()
+        && isTenantMember()
+        && tenantIdUnchanged()
+        && (
+          isOwner()
+          || (getRole() == 'operator' && resource.data.role in ['viewer', 'auditor'])
+        );
+
+      // Only owners can delete users
+      allow delete: if isAuthenticated()
+        && isTenantMember()
+        && isOwner();
+    }
+
+    // ========================================================================
+    // CONSUMERS COLLECTION
+    // ========================================================================
+
+    match /consumers/{consumerId} {
+      // Tenant members can read consumers
+      allow read: if isAuthenticated()
+        && isTenantMember()
+        && canRead();
+
+      // Operators and owners can create consumers
+      allow create: if isAuthenticated()
+        && isCreatingForTenant()
+        && canWrite();
+
+      // Operators and owners can update consumers
+      allow update: if isAuthenticated()
+        && isTenantMember()
+        && tenantIdUnchanged()
+        && canWrite();
+
+      // Only owners can delete consumers (soft delete preferred)
+      allow delete: if isAuthenticated()
+        && isTenantMember()
+        && isOwner();
+
+      // Credit reports subcollection - read only via Cloud Functions
+      match /creditReports/{reportId} {
+        allow read: if isAuthenticated()
+          && get(/databases/$(database)/documents/consumers/$(consumerId)).data.tenantId == getTenantId()
+          && canRead();
+
+        // Only Cloud Functions can write credit reports
+        allow write: if false;
+      }
+
+      // SmartCredit connection subcollection
+      match /smartCreditConnection/{connectionId} {
+        allow read: if isAuthenticated()
+          && get(/databases/$(database)/documents/consumers/$(consumerId)).data.tenantId == getTenantId()
+          && canRead();
+
+        // Only Cloud Functions can manage connections
+        allow write: if false;
+      }
+    }
+
+    // ========================================================================
+    // TRADELINES COLLECTION
+    // ========================================================================
+
+    match /tradelines/{tradelineId} {
+      // Tenant members can read tradelines
+      allow read: if isAuthenticated()
+        && isTenantMember()
+        && canRead();
+
+      // Only Cloud Functions can write tradelines (from SmartCredit sync)
+      allow write: if false;
+    }
+
+    // ========================================================================
+    // DISPUTES COLLECTION
+    // ========================================================================
+
+    match /disputes/{disputeId} {
+      // Tenant members can read disputes
+      allow read: if isAuthenticated()
+        && isTenantMember()
+        && canRead();
+
+      // Operators and owners can create disputes
+      allow create: if isAuthenticated()
+        && isCreatingForTenant()
+        && canWrite();
+
+      // Operators and owners can update disputes
+      allow update: if isAuthenticated()
+        && isTenantMember()
+        && tenantIdUnchanged()
+        && canWrite();
+
+      // Never delete disputes (compliance requirement)
+      allow delete: if false;
+
+      // Letters subcollection
+      match /letters/{letterId} {
+        allow read: if isAuthenticated()
+          && get(/databases/$(database)/documents/disputes/$(disputeId)).data.tenantId == getTenantId()
+          && canRead();
+
+        // Letters are managed via Cloud Functions
+        allow write: if false;
+      }
+
+      // Evidence subcollection
+      match /evidence/{evidenceId} {
+        allow read: if isAuthenticated()
+          && get(/databases/$(database)/documents/disputes/$(disputeId)).data.tenantId == getTenantId()
+          && canRead();
+
+        // Evidence upload is via Cloud Functions (for virus scanning)
+        allow write: if false;
+      }
+
+      // Notes subcollection
+      match /notes/{noteId} {
+        allow read: if isAuthenticated()
+          && get(/databases/$(database)/documents/disputes/$(disputeId)).data.tenantId == getTenantId()
+          && canRead();
+
+        allow create: if isAuthenticated()
+          && get(/databases/$(database)/documents/disputes/$(disputeId)).data.tenantId == getTenantId()
+          && canWrite();
+
+        allow update, delete: if false;
+      }
+    }
+
+    // ========================================================================
+    // LETTERS COLLECTION (Top-level for easier querying)
+    // ========================================================================
+
+    match /letters/{letterId} {
+      allow read: if isAuthenticated()
+        && isTenantMember()
+        && canRead();
+
+      // Letters are created via Cloud Functions
+      allow create: if false;
+
+      // Allow status updates via Cloud Functions only
+      allow update: if false;
+
+      // Never delete letters
+      allow delete: if false;
+    }
+
+    // ========================================================================
+    // EVIDENCE COLLECTION (Top-level for easier querying)
+    // ========================================================================
+
+    match /evidence/{evidenceId} {
+      allow read: if isAuthenticated()
+        && isTenantMember()
+        && canRead();
+
+      // Evidence is managed via Cloud Functions (virus scanning required)
+      allow write: if false;
+    }
+
+    // ========================================================================
+    // LETTER TEMPLATES COLLECTION
+    // ========================================================================
+
+    match /letterTemplates/{templateId} {
+      // System templates (tenantId is null) are readable by all authenticated users
+      // Tenant templates are only readable by that tenant
+      allow read: if isAuthenticated()
+        && (
+          resource.data.tenantId == null
+          || resource.data.tenantId == getTenantId()
+        )
+        && canRead();
+
+      // Only owners can manage tenant-specific templates
+      allow create: if isAuthenticated()
+        && isCreatingForTenant()
+        && isOwner();
+
+      allow update: if isAuthenticated()
+        && isTenantMember()
+        && tenantIdUnchanged()
+        && isOwner();
+
+      allow delete: if isAuthenticated()
+        && isTenantMember()
+        && isOwner();
+    }
+
+    // ========================================================================
+    // WEBHOOK EVENTS COLLECTION
+    // ========================================================================
+
+    match /webhookEvents/{eventId} {
+      // Only owners and auditors can read webhook events
+      allow read: if isAuthenticated()
+        && isTenantMember()
+        && canAudit();
+
+      // Only Cloud Functions can write webhook events
+      allow write: if false;
+    }
+
+    // ========================================================================
+    // AUDIT LOGS COLLECTION
+    // ========================================================================
+
+    match /auditLogs/{logId} {
+      // Only owners and auditors can read audit logs
+      allow read: if isAuthenticated()
+        && resource.data.tenantId == getTenantId()
+        && canAudit();
+
+      // Only Cloud Functions can write audit logs
+      allow write: if false;
+
+      // Never delete audit logs
+      allow delete: if false;
+    }
+
+    // ========================================================================
+    // BILLING RECORDS COLLECTION
+    // ========================================================================
+
+    match /billingRecords/{recordId} {
+      // Only owners can read billing records
+      allow read: if isAuthenticated()
+        && isTenantMember()
+        && isOwner();
+
+      // Only Cloud Functions can manage billing
+      allow write: if false;
+    }
+
+    // ========================================================================
+    // SCHEDULED TASKS COLLECTION
+    // ========================================================================
+
+    match /scheduledTasks/{taskId} {
+      // Operators and owners can read scheduled tasks
+      allow read: if isAuthenticated()
+        && isTenantMember()
+        && isOperatorOrHigher();
+
+      // Only Cloud Functions can manage scheduled tasks
+      allow write: if false;
+    }
+
+    // ========================================================================
+    // NOTIFICATIONS COLLECTION
+    // ========================================================================
+
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isAuthenticated()
+        && isTenantMember()
+        && (
+          resource.data.userId == request.auth.uid
+          || isOwner()
+        );
+
+      // Only Cloud Functions can create notifications
+      allow create: if false;
+
+      // Users can mark their notifications as read
+      allow update: if isAuthenticated()
+        && isTenantMember()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+
+      // Never delete notifications
+      allow delete: if false;
+    }
+
+    // ========================================================================
+    // DEFAULT: DENY ALL OTHER ACCESS
+    // ========================================================================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

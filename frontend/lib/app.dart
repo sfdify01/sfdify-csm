@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sfdify_scm/core/constants/app_constants.dart';
 import 'package:sfdify_scm/core/router/app_router.dart';
 import 'package:sfdify_scm/core/theme/app_theme.dart';
+import 'package:sfdify_scm/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:sfdify_scm/injection/injection.dart';
 import 'package:sfdify_scm/shared/presentation/bloc/theme/theme_bloc.dart';
 
@@ -15,6 +16,9 @@ class App extends StatelessWidget {
       providers: [
         BlocProvider(
           create: (_) => getIt<ThemeBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => getIt<AuthBloc>()..add(const AuthCheckRequested()),
         ),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(

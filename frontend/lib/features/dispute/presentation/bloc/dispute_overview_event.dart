@@ -24,11 +24,6 @@ class DisputeOverviewBureauFilterChanged extends DisputeOverviewEvent {
   List<Object?> get props => [bureau];
 }
 
-class DisputeOverviewPageChanged extends DisputeOverviewEvent {
-  final int page;
-
-  const DisputeOverviewPageChanged(this.page);
-
-  @override
-  List<Object?> get props => [page];
+class DisputeOverviewLoadMore extends DisputeOverviewEvent {
+  const DisputeOverviewLoadMore();
 }
