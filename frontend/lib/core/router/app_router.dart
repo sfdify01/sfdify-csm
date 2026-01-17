@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sfdify_scm/core/router/route_names.dart';
 import 'package:sfdify_scm/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:sfdify_scm/features/auth/presentation/pages/company_setup_page.dart';
 import 'package:sfdify_scm/features/auth/presentation/pages/login_page.dart';
 import 'package:sfdify_scm/features/auth/presentation/pages/register_page.dart';
 import 'package:sfdify_scm/features/dispute/presentation/pages/dispute_overview_page.dart';
@@ -45,7 +44,6 @@ class AppRouter {
   static const _publicRoutes = [
     RoutePaths.login,
     RoutePaths.register,
-    RoutePaths.companySetup,
   ];
 
   /// Redirect based on authentication state
@@ -55,16 +53,9 @@ class AppRouter {
     final currentPath = state.matchedLocation;
     final isPublicRoute = _publicRoutes.contains(currentPath);
     final isAuthenticated = authState.status == AuthStatus.authenticated;
-    final needsCompanySetup =
-        authState.status == AuthStatus.needsCompanySetup;
-
-    // If user needs company setup, redirect to company setup page
-    if (needsCompanySetup && currentPath != RoutePaths.companySetup) {
-      return RoutePaths.companySetup;
-    }
 
     // If not authenticated and not on a public route, redirect to login
-    if (!isAuthenticated && !needsCompanySetup && !isPublicRoute) {
+    if (!isAuthenticated && !isPublicRoute) {
       return RoutePaths.login;
     }
 
@@ -92,13 +83,6 @@ class AppRouter {
           name: RouteNames.register,
           pageBuilder: (context, state) => const NoTransitionPage(
             child: RegisterPage(),
-          ),
-        ),
-        GoRoute(
-          path: RoutePaths.companySetup,
-          name: RouteNames.companySetup,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: CompanySetupPage(),
           ),
         ),
 

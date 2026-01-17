@@ -5,8 +5,6 @@ enum AuthStatus {
   loading,
   authenticated,
   unauthenticated,
-  /// Google user signed in but needs company setup
-  needsCompanySetup,
 }
 
 class AuthBlocState extends Equatable {
@@ -14,19 +12,11 @@ class AuthBlocState extends Equatable {
     this.status = AuthStatus.initial,
     this.user,
     this.errorMessage,
-    this.googleUserEmail,
-    this.googleUserDisplayName,
   });
 
   final AuthStatus status;
   final AuthState? user;
   final String? errorMessage;
-
-  /// Email of Google user who needs company setup
-  final String? googleUserEmail;
-
-  /// Display name of Google user who needs company setup
-  final String? googleUserDisplayName;
 
   /// Check if user is authenticated
   bool get isAuthenticated => status == AuthStatus.authenticated;
@@ -47,15 +37,11 @@ class AuthBlocState extends Equatable {
     AuthStatus? status,
     AuthState? user,
     String? errorMessage,
-    String? googleUserEmail,
-    String? googleUserDisplayName,
   }) {
     return AuthBlocState(
       status: status ?? this.status,
       user: user ?? this.user,
       errorMessage: errorMessage,
-      googleUserEmail: googleUserEmail ?? this.googleUserEmail,
-      googleUserDisplayName: googleUserDisplayName ?? this.googleUserDisplayName,
     );
   }
 
@@ -64,7 +50,5 @@ class AuthBlocState extends Equatable {
         status,
         user,
         errorMessage,
-        googleUserEmail,
-        googleUserDisplayName,
       ];
 }

@@ -4,7 +4,6 @@
  *
  * These functions are PUBLIC (no auth required) and handle:
  * - Self-service signup with email/password
- * - Google Sign-In completion (tenant setup for new Google users)
  *
  * Unlike other functions, these don't use withAuth middleware
  * since they're called by unauthenticated users.
@@ -43,7 +42,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.authCheckStatus = exports.authCompleteGoogleSignUp = exports.authSignUp = void 0;
+exports.authSignUp = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin_1 = require("../../admin");
 const uuid_1 = require("uuid");
@@ -163,7 +162,17 @@ async function createTenantAndUser(userId, email, displayName, companyName, plan
     };
     // Set custom claims BEFORE writing to Firestore
     // This ensures the token is ready when user signs in
-    await (0, auth_1.setUserClaims)(userId, tenantId, "owner");
+    // Wrap with timeout protection to prevent hanging
+    try {
+        const claimsPromise = (0, auth_1.setUserClaims)(userId, tenantId, "owner");
+        await Promise.race([
+            claimsPromise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Claims update timed out after 10 seconds")), 10000)),
+        ]);
+    }
+    catch (error) {
+        throw new errors_1.AppError(errors_1.ErrorCode.INTERNAL_ERROR, "Failed to configure user permissions. This may be a temporary issue - please try again or contact support.", 500);
+    }
     // Write to Firestore in a batch
     const batch = admin_1.db.batch();
     batch.set(admin_1.db.collection("tenants").doc(tenantId), tenant);
@@ -251,123 +260,10 @@ async function signUpHandler(data) {
         throw error;
     }
 }
-exports.authSignUp = functions.https.onCall((0, errors_1.withErrorHandling)(signUpHandler));
-// ============================================================================
-// authCompleteGoogleSignUp - Complete Google Sign-In with Tenant Setup
-// ============================================================================
-/**
- * Complete registration for a Google Sign-In user.
- * The user already exists in Firebase Auth (from Google sign-in on client),
- * but doesn't have a tenant yet.
- *
- * This function REQUIRES authentication (user signed in via Google)
- * but doesn't require a tenant (since that's what we're creating).
- */
-async function completeGoogleSignUpHandler(data, context) {
-    // This function requires the user to be signed in via Google
-    if (!context.auth) {
-        throw new errors_1.AppError(errors_1.ErrorCode.UNAUTHENTICATED, "Authentication required. Please sign in with Google first.", 401);
-    }
-    const { uid, token } = context.auth;
-    const email = token.email;
-    const displayName = token.name || email?.split("@")[0] || "User";
-    if (!email) {
-        throw new errors_1.AppError(errors_1.ErrorCode.VALIDATION_ERROR, "Email not available from Google account", 400);
-    }
-    // Check if user already has a tenant
-    const existingClaims = token;
-    if (existingClaims.tenantId) {
-        throw new errors_1.AppError(errors_1.ErrorCode.VALIDATION_ERROR, "You already have an account. Please sign in instead.", 400);
-    }
-    // Check if user document already exists
-    const existingUserDoc = await admin_1.db.collection("users").doc(uid).get();
-    if (existingUserDoc.exists) {
-        throw new errors_1.AppError(errors_1.ErrorCode.VALIDATION_ERROR, "Account setup already completed. Please sign in.", 400);
-    }
-    // Validate input
-    validateCompanyName(data.companyName);
-    const plan = data.plan || "starter";
-    if (!["starter", "professional", "enterprise"].includes(plan)) {
-        throw new errors_1.AppError(errors_1.ErrorCode.VALIDATION_ERROR, "Invalid plan selected", 400);
-    }
-    // Create tenant and user document
-    const { tenantId } = await createTenantAndUser(uid, email, displayName, data.companyName, plan);
-    return {
-        success: true,
-        data: {
-            userId: uid,
-            tenantId,
-            email,
-            displayName,
-            role: "owner",
-        },
-    };
-}
-exports.authCompleteGoogleSignUp = functions.https.onCall((0, errors_1.withErrorHandling)(completeGoogleSignUpHandler));
-// ============================================================================
-// authCheckStatus - Check if current user has completed setup
-// ============================================================================
-/**
- * Check if the current authenticated user has completed account setup.
- * Used by frontend to determine whether to show company setup page.
- *
- * Returns:
- * - needsSetup: true if user exists in Auth but has no tenant
- * - isComplete: true if user has both Auth and tenant configured
- */
-async function checkStatusHandler(_data, context) {
-    if (!context.auth) {
-        return {
-            success: true,
-            data: {
-                needsSetup: false,
-                isComplete: false,
-            },
-        };
-    }
-    const { uid, token } = context.auth;
-    const claims = token;
-    // Check if user has tenant in claims
-    if (claims.tenantId) {
-        return {
-            success: true,
-            data: {
-                needsSetup: false,
-                isComplete: true,
-                email: token.email || undefined,
-                displayName: token.name || undefined,
-            },
-        };
-    }
-    // Check if user document exists
-    const userDoc = await admin_1.db.collection("users").doc(uid).get();
-    if (userDoc.exists) {
-        // User doc exists but claims might be stale - refresh claims
-        const userData = userDoc.data();
-        if (userData?.tenantId) {
-            // Refresh claims
-            await (0, auth_1.setUserClaims)(uid, userData.tenantId, userData.role || "owner");
-            return {
-                success: true,
-                data: {
-                    needsSetup: false,
-                    isComplete: true,
-                    email: token.email || undefined,
-                    displayName: token.name || undefined,
-                },
-            };
-        }
-    }
-    // User needs to complete setup
-    return {
-        success: true,
-        data: {
-            needsSetup: true,
-            isComplete: false,
-            email: token.email || undefined,
-            displayName: token.name || undefined,
-        },
-    };
-}
-exports.authCheckStatus = functions.https.onCall((0, errors_1.withErrorHandling)(checkStatusHandler));
+exports.authSignUp = functions
+    .runWith({
+    timeoutSeconds: 120,
+    memory: "512MB",
+})
+    .https.onCall((0, errors_1.withErrorHandling)(signUpHandler));
 //# sourceMappingURL=index.js.map

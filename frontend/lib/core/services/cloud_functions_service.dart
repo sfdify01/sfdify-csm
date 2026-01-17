@@ -118,7 +118,13 @@ class CloudFunctionsService {
   }) async {
     try {
       final callable = _functions.httpsCallable(functionName);
-      final result = await callable.call<Map<String, dynamic>>(data);
+      final result = await callable.call<Map<String, dynamic>>(data).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw FirebaseFunctionsException(
+          code: 'deadline-exceeded',
+          message: 'Request timed out after 30 seconds. Please try again.',
+        ),
+      );
 
       final responseData = result.data;
       return ApiResponse.fromJson(responseData, fromJson);
@@ -150,7 +156,13 @@ class CloudFunctionsService {
   }) async {
     try {
       final callable = _functions.httpsCallable(functionName);
-      final result = await callable.call<Map<String, dynamic>>(data);
+      final result = await callable.call<Map<String, dynamic>>(data).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw FirebaseFunctionsException(
+          code: 'deadline-exceeded',
+          message: 'Request timed out after 30 seconds. Please try again.',
+        ),
+      );
 
       final responseData = result.data;
       final success = responseData['success'] as bool? ?? false;
@@ -494,27 +506,6 @@ class CloudFunctionsService {
         },
         fromJson: fromJson,
       );
-
-  /// Complete Google Sign-In by creating a tenant for the user
-  Future<ApiResponse<T>> authCompleteGoogleSignUp<T>({
-    required String companyName,
-    String plan = 'starter',
-    required T Function(Map<String, dynamic>) fromJson,
-  }) =>
-      call(
-        functionName: 'authCompleteGoogleSignUp',
-        data: {
-          'companyName': companyName,
-          'plan': plan,
-        },
-        fromJson: fromJson,
-      );
-
-  /// Check if the current user needs to complete account setup
-  Future<ApiResponse<T>> authCheckStatus<T>(
-    T Function(Map<String, dynamic>) fromJson,
-  ) =>
-      call(functionName: 'authCheckStatus', fromJson: fromJson);
 
   // ============================================================================
   // User Functions

@@ -51,25 +51,6 @@ class AuthRegisterRequested extends AuthEvent {
   List<Object?> get props => [email, password, displayName, companyName, plan];
 }
 
-/// User requested Google Sign-In
-class AuthGoogleSignInRequested extends AuthEvent {
-  const AuthGoogleSignInRequested();
-}
-
-/// User completed Google Sign-In company setup
-class AuthGoogleSignUpCompleted extends AuthEvent {
-  const AuthGoogleSignUpCompleted({
-    required this.companyName,
-    this.plan = 'starter',
-  });
-
-  final String companyName;
-  final String plan;
-
-  @override
-  List<Object?> get props => [companyName, plan];
-}
-
 /// Internal event when Firebase auth state changes
 class AuthStateChanged extends AuthEvent {
   const AuthStateChanged(this.authState);

@@ -47,8 +47,6 @@ class _LoginPageState extends State<LoginPage> {
         listener: (context, state) {
           if (state.status == AuthStatus.authenticated) {
             context.go(RoutePaths.home);
-          } else if (state.status == AuthStatus.needsCompanySetup) {
-            context.go(RoutePaths.companySetup);
           }
         },
         builder: (context, state) {
@@ -195,45 +193,6 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Divider with OR
-                      Row(
-                        children: [
-                          const Expanded(child: Divider()),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'OR',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                          const Expanded(child: Divider()),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Google Sign-In Button
-                      OutlinedButton.icon(
-                        onPressed: state.status == AuthStatus.loading
-                            ? null
-                            : () => context.read<AuthBloc>().add(
-                                const AuthGoogleSignInRequested(),
-                              ),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                        ),
-                        icon: Image.network(
-                          'https://www.google.com/favicon.ico',
-                          width: 18,
-                          height: 18,
-                          errorBuilder: (_, __, ___) =>
-                              const Icon(Icons.g_mobiledata, size: 24),
-                        ),
-                        label: const Text('Continue with Google'),
                       ),
                       const SizedBox(height: 32),
 

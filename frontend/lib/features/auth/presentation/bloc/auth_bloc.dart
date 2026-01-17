@@ -15,8 +15,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthBlocState> {
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
-    on<AuthGoogleSignInRequested>(_onGoogleSignInRequested);
-    on<AuthGoogleSignUpCompleted>(_onGoogleSignUpCompleted);
     on<AuthStateChanged>(_onStateChanged);
 
     // Listen to auth state changes from Firebase
@@ -147,95 +145,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthBlocState> {
     }
   }
 
-  Future<void> _onGoogleSignInRequested(
-    AuthGoogleSignInRequested event,
-    Emitter<AuthBlocState> emit,
-  ) async {
-    emit(state.copyWith(status: AuthStatus.loading, errorMessage: null));
-
-    try {
-      final result = await _authService.signInWithGoogle();
-
-      if (result.needsSetup) {
-        // User needs to complete company setup
-        emit(state.copyWith(
-          status: AuthStatus.needsCompanySetup,
-          googleUserEmail: result.email,
-          googleUserDisplayName: result.displayName,
-        ));
-      } else if (result.authState != null) {
-        // User is fully authenticated
-        emit(state.copyWith(
-          status: AuthStatus.authenticated,
-          user: result.authState,
-        ));
-      } else {
-        emit(state.copyWith(
-          status: AuthStatus.unauthenticated,
-          errorMessage: 'Failed to complete Google sign-in.',
-        ));
-      }
-    } catch (e, stackTrace) {
-      // Log the actual error for debugging
-      print('Google sign-in error: $e');
-      print('Stack trace: $stackTrace');
-
-      String errorMessage = 'Google sign-in failed.';
-      if (e.toString().contains('cancelled')) {
-        // User cancelled - just go back to unauthenticated without error
-        emit(state.copyWith(status: AuthStatus.unauthenticated));
-        return;
-      }
-
-      emit(state.copyWith(
-        status: AuthStatus.unauthenticated,
-        errorMessage: '$errorMessage Error: $e',
-      ));
-    }
-  }
-
-  Future<void> _onGoogleSignUpCompleted(
-    AuthGoogleSignUpCompleted event,
-    Emitter<AuthBlocState> emit,
-  ) async {
-    emit(state.copyWith(status: AuthStatus.loading, errorMessage: null));
-
-    try {
-      final authState = await _authService.completeGoogleSignUp(
-        companyName: event.companyName,
-        plan: event.plan,
-      );
-
-      emit(state.copyWith(
-        status: AuthStatus.authenticated,
-        user: authState,
-        // Clear Google user info since setup is complete
-        googleUserEmail: null,
-        googleUserDisplayName: null,
-      ));
-    } catch (e) {
-      String errorMessage = 'Failed to complete account setup.';
-      if (e.toString().contains('VALIDATION_ERROR')) {
-        final match = RegExp(r'message: ([^,\}]+)').firstMatch(e.toString());
-        errorMessage = match?.group(1) ?? errorMessage;
-      }
-
-      emit(state.copyWith(
-        status: AuthStatus.needsCompanySetup,
-        errorMessage: errorMessage,
-      ));
-    }
-  }
-
   void _onStateChanged(
     AuthStateChanged event,
     Emitter<AuthBlocState> emit,
   ) {
-    // Don't override needsCompanySetup state from Firebase listener
-    if (state.status == AuthStatus.needsCompanySetup) {
-      return;
-    }
-
     if (event.authState != null) {
       emit(state.copyWith(
         status: AuthStatus.authenticated,

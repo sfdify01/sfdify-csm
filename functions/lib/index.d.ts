@@ -14,7 +14,7 @@ export { evidenceUpload, evidenceGet, evidenceUpdate, evidenceDelete, evidenceLi
 export { adminAnalyticsDisputes, adminAnalyticsLetters, adminBillingUsage, adminAuditLogs, adminExportData, adminGetExportStatus, adminSystemHealth, } from "./functions/admin";
 export { usersCreate, usersGet, usersUpdate, usersDelete, usersList, usersSetRole, } from "./functions/users";
 export { tenantsCreate, tenantsGet, tenantsUpdate, tenantsList, } from "./functions/tenants";
-export { authSignUp, authCompleteGoogleSignUp, authCheckStatus, } from "./functions/auth";
+export { authSignUp, } from "./functions/auth";
 export { webhooksLob, webhooksSmartCredit, webhooksRetry, webhooksList, } from "./functions/webhooks";
 export { scheduledSlaChecker, scheduledReportRefresh, scheduledReconciliation, scheduledBillingAggregator, scheduledCleanup, } from "./functions/scheduled";
 export { onDisputeCreate, onDisputeUpdate, onLetterStatusChange, onConsumerCreate, onEvidenceUpload, onSmartCreditConnectionChange, } from "./functions/triggers";

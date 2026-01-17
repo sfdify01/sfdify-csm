@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:injectable/injectable.dart';
 import 'package:sfdify_scm/core/services/cloud_functions_service.dart';
 
@@ -57,28 +55,6 @@ class SignUpResult {
   }
 }
 
-/// Result of Google Sign-In indicating if user needs company setup
-class GoogleSignInResult {
-  const GoogleSignInResult({
-    required this.needsSetup,
-    this.authState,
-    this.email,
-    this.displayName,
-  });
-
-  /// True if the user needs to complete company setup
-  final bool needsSetup;
-
-  /// Auth state if user has completed setup
-  final AuthState? authState;
-
-  /// User's email (available even if setup incomplete)
-  final String? email;
-
-  /// User's display name from Google
-  final String? displayName;
-}
-
 /// Service for Firebase Authentication operations.
 ///
 /// Handles sign-in, sign-out, and user state management.
@@ -89,10 +65,6 @@ class FirebaseAuthService {
 
   final FirebaseAuth _auth;
   final CloudFunctionsService _cloudFunctions;
-
-  /// Google Sign-In instance (v7.x singleton API)
-  GoogleSignIn get _googleSignIn => GoogleSignIn.instance;
-  bool _googleSignInInitialized = false;
 
   /// Stream of authentication state changes
   Stream<AuthState?> get authStateChanges =>
@@ -174,136 +146,8 @@ class FirebaseAuthService {
     return authState;
   }
 
-  /// Initialize Google Sign-In (required for v7.x API)
-  Future<void> _ensureGoogleSignInInitialized() async {
-    if (_googleSignInInitialized) return;
-
-    await _googleSignIn.initialize();
-    _googleSignInInitialized = true;
-  }
-
-  /// Sign in with Google account
-  ///
-  /// Returns a [GoogleSignInResult] indicating whether:
-  /// - User is fully authenticated (has tenant) -> needsSetup = false
-  /// - User needs to complete company setup -> needsSetup = true
-  Future<GoogleSignInResult> signInWithGoogle() async {
-    User? user;
-
-    if (kIsWeb) {
-      // On web, use Firebase Auth's built-in popup sign-in
-      // This properly handles Google Identity Services (GIS)
-      final provider = GoogleAuthProvider();
-      final userCredential = await _auth.signInWithPopup(provider);
-      user = userCredential.user;
-    } else {
-      // On mobile platforms, use google_sign_in package
-      // Initialize Google Sign-In if not already done (v7.x requirement)
-      await _ensureGoogleSignInInitialized();
-
-      // Trigger the Google Sign-In flow (v7.x API uses authenticate())
-      final googleAccount = await _googleSignIn.authenticate();
-
-      // Get authentication tokens from the account
-      final googleAuth = await googleAccount.authentication;
-      final idToken = googleAuth.idToken;
-
-      // For Firebase, we primarily need the idToken
-      if (idToken == null) {
-        throw FirebaseAuthException(
-          code: 'google-signin-failed',
-          message: 'Failed to obtain Google ID token',
-        );
-      }
-
-      // Create a credential from the Google auth tokens
-      final credential = GoogleAuthProvider.credential(
-        idToken: idToken,
-      );
-
-      // Sign in to Firebase with the Google credential
-      final userCredential = await _auth.signInWithCredential(credential);
-      user = userCredential.user;
-    }
-
-    if (user == null) {
-      throw FirebaseAuthException(
-        code: 'google-signin-failed',
-        message: 'Failed to sign in with Google',
-      );
-    }
-
-    // Check if user has a tenant set up
-    final authState = await _mapUserToAuthState(user);
-
-    if (authState != null) {
-      // User has completed setup
-      return GoogleSignInResult(
-        needsSetup: false,
-        authState: authState,
-        email: user.email,
-        displayName: user.displayName,
-      );
-    }
-
-    // User needs to complete company setup
-    return GoogleSignInResult(
-      needsSetup: true,
-      email: user.email,
-      displayName: user.displayName,
-    );
-  }
-
-  /// Complete Google Sign-In by setting up the company/tenant
-  ///
-  /// Call this after [signInWithGoogle] returns needsSetup = true
-  Future<AuthState> completeGoogleSignUp({
-    required String companyName,
-    String plan = 'starter',
-  }) async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw FirebaseAuthException(
-        code: 'no-user',
-        message: 'No signed-in user. Please sign in with Google first.',
-      );
-    }
-
-    // Call backend to create tenant and set claims
-    final response = await _cloudFunctions.authCompleteGoogleSignUp(
-      companyName: companyName,
-      plan: plan,
-      fromJson: SignUpResult.fromJson,
-    );
-
-    if (!response.success || response.data == null) {
-      throw FirebaseAuthException(
-        code: response.error?.code ?? 'setup-failed',
-        message: response.error?.message ?? 'Failed to complete account setup',
-      );
-    }
-
-    // Force refresh the token to get the new claims
-    await user.getIdToken(true);
-
-    // Get the updated auth state
-    final authState = await _mapUserToAuthState(user);
-    if (authState == null) {
-      throw FirebaseAuthException(
-        code: 'invalid-claims',
-        message: 'Setup completed but claims not set. Please try signing in again.',
-      );
-    }
-
-    return authState;
-  }
-
   /// Sign out the current user
   Future<void> signOut() async {
-    // Sign out from Google if initialized (v7.x API)
-    if (_googleSignInInitialized) {
-      await _googleSignIn.signOut();
-    }
     await _auth.signOut();
   }
 
