@@ -116,14 +116,7 @@ class AppNavigationSidebar extends StatelessWidget {
                   icon: Icons.people,
                   label: 'Consumers',
                   isActive: currentRoute.startsWith('/consumers'),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Consumers page coming soon'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  },
+                  onTap: () => context.go(RoutePaths.consumerList),
                 ),
                 NavigationMenuItem(
                   icon: Icons.gavel,
@@ -148,14 +141,7 @@ class AppNavigationSidebar extends StatelessWidget {
                   icon: Icons.mail,
                   label: 'Letters',
                   isActive: currentRoute.startsWith('/letters'),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Letters page coming soon'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  },
+                  onTap: () => context.go(RoutePaths.letterList),
                 ),
 
                 const Gap(16),

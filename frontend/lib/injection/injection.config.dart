@@ -36,15 +36,26 @@ import '../features/consumer/data/repositories/consumer_repository_impl.dart'
     as _i677;
 import '../features/consumer/domain/repositories/consumer_repository.dart'
     as _i236;
+import '../features/consumer/domain/usecases/get_consumer.dart' as _i702;
 import '../features/consumer/domain/usecases/get_consumers.dart' as _i130;
+import '../features/consumer/presentation/bloc/consumer_detail_bloc.dart'
+    as _i669;
+import '../features/consumer/presentation/bloc/consumer_form_bloc.dart'
+    as _i487;
+import '../features/consumer/presentation/bloc/consumer_list_bloc.dart'
+    as _i219;
 import '../features/dispute/data/datasources/dispute_remote_datasource.dart'
     as _i717;
 import '../features/dispute/data/repositories/dispute_repository_impl.dart'
     as _i1061;
 import '../features/dispute/domain/repositories/dispute_repository.dart'
     as _i328;
+import '../features/dispute/domain/usecases/get_dispute.dart' as _i500;
 import '../features/dispute/domain/usecases/get_dispute_metrics.dart' as _i620;
 import '../features/dispute/domain/usecases/get_disputes.dart' as _i627;
+import '../features/dispute/presentation/bloc/dispute_create_bloc.dart'
+    as _i793;
+import '../features/dispute/presentation/bloc/dispute_detail_bloc.dart' as _i66;
 import '../features/dispute/presentation/bloc/dispute_overview_bloc.dart'
     as _i689;
 import '../features/evidence/data/datasources/evidence_remote_datasource.dart'
@@ -53,6 +64,8 @@ import '../features/evidence/data/repositories/evidence_repository_impl.dart'
     as _i282;
 import '../features/evidence/domain/repositories/evidence_repository.dart'
     as _i211;
+import '../features/evidence/presentation/bloc/evidence_upload_bloc.dart'
+    as _i434;
 import '../features/home/data/datasources/home_remote_datasource.dart' as _i75;
 import '../features/home/data/repositories/home_repository_impl.dart' as _i6;
 import '../features/home/domain/repositories/home_repository.dart' as _i66;
@@ -63,6 +76,9 @@ import '../features/letter/data/datasources/letter_remote_datasource.dart'
 import '../features/letter/data/repositories/letter_repository_impl.dart'
     as _i639;
 import '../features/letter/domain/repositories/letter_repository.dart' as _i887;
+import '../features/letter/presentation/bloc/letter_detail_bloc.dart' as _i879;
+import '../features/letter/presentation/bloc/letter_generate_bloc.dart' as _i53;
+import '../features/letter/presentation/bloc/letter_list_bloc.dart' as _i474;
 import '../features/tenant/data/datasources/tenant_remote_datasource.dart'
     as _i718;
 import '../features/tenant/data/repositories/tenant_repository_impl.dart'
@@ -181,6 +197,9 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i6.NetworkInfo>(),
       ),
     );
+    gh.factory<_i500.GetDispute>(
+      () => _i500.GetDispute(gh<_i328.DisputeRepository>()),
+    );
     gh.factory<_i620.GetDisputeMetrics>(
       () => _i620.GetDisputeMetrics(gh<_i328.DisputeRepository>()),
     );
@@ -208,14 +227,53 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i6.NetworkInfo>(),
       ),
     );
+    gh.factory<_i66.DisputeDetailBloc>(
+      () => _i66.DisputeDetailBloc(
+        gh<_i500.GetDispute>(),
+        gh<_i328.DisputeRepository>(),
+      ),
+    );
+    gh.factory<_i702.GetConsumer>(
+      () => _i702.GetConsumer(gh<_i236.ConsumerRepository>()),
+    );
     gh.factory<_i130.GetConsumers>(
       () => _i130.GetConsumers(gh<_i236.ConsumerRepository>()),
     );
+    gh.factory<_i487.ConsumerFormBloc>(
+      () => _i487.ConsumerFormBloc(gh<_i236.ConsumerRepository>()),
+    );
     gh.factory<_i824.HomeBloc>(() => _i824.HomeBloc(gh<_i489.GetHomeData>()));
+    gh.factory<_i879.LetterDetailBloc>(
+      () => _i879.LetterDetailBloc(gh<_i887.LetterRepository>()),
+    );
+    gh.factory<_i474.LetterListBloc>(
+      () => _i474.LetterListBloc(gh<_i887.LetterRepository>()),
+    );
+    gh.factory<_i219.ConsumerListBloc>(
+      () => _i219.ConsumerListBloc(gh<_i130.GetConsumers>()),
+    );
     gh.factory<_i689.DisputeOverviewBloc>(
       () => _i689.DisputeOverviewBloc(
         gh<_i620.GetDisputeMetrics>(),
         gh<_i627.GetDisputes>(),
+      ),
+    );
+    gh.factory<_i53.LetterGenerateBloc>(
+      () => _i53.LetterGenerateBloc(
+        gh<_i887.LetterRepository>(),
+        gh<_i328.DisputeRepository>(),
+      ),
+    );
+    gh.factory<_i669.ConsumerDetailBloc>(
+      () => _i669.ConsumerDetailBloc(gh<_i702.GetConsumer>()),
+    );
+    gh.factory<_i434.EvidenceUploadBloc>(
+      () => _i434.EvidenceUploadBloc(gh<_i211.EvidenceRepository>()),
+    );
+    gh.factory<_i793.DisputeCreateBloc>(
+      () => _i793.DisputeCreateBloc(
+        gh<_i130.GetConsumers>(),
+        gh<_i328.DisputeRepository>(),
       ),
     );
     return this;

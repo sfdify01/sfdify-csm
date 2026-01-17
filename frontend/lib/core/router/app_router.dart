@@ -6,8 +6,16 @@ import 'package:sfdify_scm/core/router/route_names.dart';
 import 'package:sfdify_scm/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:sfdify_scm/features/auth/presentation/pages/login_page.dart';
 import 'package:sfdify_scm/features/auth/presentation/pages/register_page.dart';
+import 'package:sfdify_scm/features/consumer/presentation/pages/consumer_detail_page.dart';
+import 'package:sfdify_scm/features/consumer/presentation/pages/consumer_form_page.dart';
+import 'package:sfdify_scm/features/consumer/presentation/pages/consumer_list_page.dart';
+import 'package:sfdify_scm/features/dispute/presentation/pages/dispute_create_page.dart';
+import 'package:sfdify_scm/features/dispute/presentation/pages/dispute_detail_page.dart';
 import 'package:sfdify_scm/features/dispute/presentation/pages/dispute_overview_page.dart';
 import 'package:sfdify_scm/features/home/presentation/pages/home_page.dart';
+import 'package:sfdify_scm/features/letter/presentation/pages/letter_detail_page.dart';
+import 'package:sfdify_scm/features/letter/presentation/pages/letter_generate_page.dart';
+import 'package:sfdify_scm/features/letter/presentation/pages/letter_list_page.dart';
 import 'package:sfdify_scm/injection/injection.dart';
 import 'package:sfdify_scm/shared/presentation/layout/main_layout.dart';
 
@@ -103,6 +111,79 @@ class AppRouter {
               pageBuilder: (context, state) => NoTransitionPage(
                 child: const DisputeOverviewPage(),
               ),
+            ),
+            GoRoute(
+              path: RoutePaths.disputeCreate,
+              name: RouteNames.disputeCreate,
+              pageBuilder: (context, state) {
+                final consumerId = state.uri.queryParameters['consumerId'];
+                return NoTransitionPage(
+                  child: DisputeCreatePage(preselectedConsumerId: consumerId),
+                );
+              },
+            ),
+            GoRoute(
+              path: RoutePaths.disputeDetail,
+              name: RouteNames.disputeDetail,
+              pageBuilder: (context, state) {
+                final id = state.pathParameters['id']!;
+                return NoTransitionPage(
+                  child: DisputeDetailPage(disputeId: id),
+                );
+              },
+            ),
+            // Consumer routes
+            GoRoute(
+              path: RoutePaths.consumerList,
+              name: RouteNames.consumerList,
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: ConsumerListPage(),
+              ),
+            ),
+            GoRoute(
+              path: RoutePaths.consumerCreate,
+              name: RouteNames.consumerCreate,
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: ConsumerFormPage(),
+              ),
+            ),
+            GoRoute(
+              path: RoutePaths.consumerDetail,
+              name: RouteNames.consumerDetail,
+              pageBuilder: (context, state) {
+                final id = state.pathParameters['id']!;
+                return NoTransitionPage(
+                  child: ConsumerDetailPage(consumerId: id),
+                );
+              },
+            ),
+            // Letter routes
+            GoRoute(
+              path: RoutePaths.letterList,
+              name: RouteNames.letterList,
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: LetterListPage(),
+              ),
+            ),
+            GoRoute(
+              path: RoutePaths.letterDetail,
+              name: RouteNames.letterDetail,
+              pageBuilder: (context, state) {
+                final id = state.pathParameters['id']!;
+                return NoTransitionPage(
+                  child: LetterDetailPage(letterId: id),
+                );
+              },
+            ),
+            GoRoute(
+              path: RoutePaths.letterGenerate,
+              name: RouteNames.letterGenerate,
+              pageBuilder: (context, state) {
+                final disputeId = state.pathParameters['disputeId']!;
+                return NoTransitionPage(
+                  child: LetterGeneratePage(disputeId: disputeId),
+                );
+              },
             ),
           ],
         ),

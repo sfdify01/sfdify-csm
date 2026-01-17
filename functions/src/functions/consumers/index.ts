@@ -6,7 +6,7 @@
  */
 
 import * as functions from "firebase-functions";
-import { db } from "../../admin";
+import { db, storage } from "../../admin";
 import { v4 as uuidv4 } from "uuid";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import {
@@ -31,11 +31,14 @@ import {
 } from "../../utils/errors";
 import {
   encryptPii,
+  decryptPii,
   decryptPiiFields,
   hashPii,
   maskValue,
 } from "../../utils/encryption";
 import { logAuditEvent } from "../../utils/audit";
+import { smartCreditService } from "../../services/smartCreditService";
+import { firebaseConfig } from "../../config";
 import {
   Consumer,
   ConsumerConsent,
@@ -44,10 +47,13 @@ import {
   Email,
   Tradeline,
   SmartCreditConnection,
+  CreditReport,
+  Bureau,
   ApiResponse,
   PaginatedResponse,
 } from "../../types";
 import Joi from "joi";
+import * as logger from "firebase-functions/logger";
 
 // ============================================================================
 // Constants
@@ -608,18 +614,13 @@ async function smartCreditConnectHandler(
     status: "pending",
   });
 
-  // Build SmartCredit authorization URL
-  // In a real implementation, this would use the actual SmartCredit OAuth endpoint
-  const smartCreditAuthBaseUrl = "https://api.smartcredit.com/oauth/authorize";
-  const params = new URLSearchParams({
-    client_id: tenant.smartCreditConfig.clientIdSecretRef, // Would decrypt this in production
-    redirect_uri: `${tenant.smartCreditConfig.webhookEndpoint}/callback`,
-    response_type: "code",
-    scope: "credit_report credit_score",
+  // Build SmartCredit authorization URL using the service
+  const callbackUri = `${tenant.smartCreditConfig.webhookEndpoint}/callback`;
+  const authorizationUrl = smartCreditService.getAuthorizationUrl(
+    callbackUri,
     state,
-  });
-
-  const authorizationUrl = `${smartCreditAuthBaseUrl}?${params.toString()}`;
+    ["credit_report", "credit_score", "alerts"]
+  );
 
   // Audit log
   await logAuditEvent({
@@ -787,38 +788,113 @@ async function reportsRefreshHandler(
     );
   }
 
-  // Queue report refresh tasks for each bureau
-  // In a real implementation, this would call SmartCredit API
-  const bureaus = validatedData.bureaus || ["equifax", "experian", "transunion"];
+  // Get active SmartCredit connection with valid access token
+  const activeConnection = await smartCreditService.getActiveConnection(
+    consumer.smartCreditConnectionId
+  );
 
-  // Create pending report entries
+  if (!activeConnection) {
+    throw new AppError(
+      ErrorCode.SMARTCREDIT_TOKEN_EXPIRED,
+      "SmartCredit session has expired. Please reconnect.",
+      400
+    );
+  }
+
+  const { accessToken } = activeConnection;
+  const bureaus = (validatedData.bureaus || ["equifax", "experian", "transunion"]) as Bureau[];
+  const results: { bureau: string; success: boolean; error?: string }[] = [];
+
+  // Fetch reports from SmartCredit for each bureau
   for (const bureau of bureaus) {
-    const reportId = uuidv4();
-    await db.collection("credit_reports").doc(reportId).set({
-      id: reportId,
-      consumerId: validatedData.consumerId,
-      tenantId,
-      bureau,
-      pulledAt: FieldValue.serverTimestamp(),
-      status: "processing",
-      rawJsonRef: "",
-      hash: "",
-      scoreFactors: [],
-      summary: {
-        totalAccounts: 0,
-        openAccounts: 0,
-        closedAccounts: 0,
-        delinquentAccounts: 0,
-        derogatoryAccounts: 0,
-        totalBalance: 0,
-        totalCreditLimit: 0,
-        utilizationPercent: 0,
-      },
-      publicRecords: [],
-      inquiries: [],
-      createdAt: FieldValue.serverTimestamp(),
-      expiresAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 days
-    });
+    try {
+      logger.info("[Consumer] Fetching credit report", {
+        consumerId: validatedData.consumerId,
+        bureau,
+      });
+
+      // Call SmartCredit API
+      const scReport = await smartCreditService.getCreditReport(accessToken, bureau);
+
+      // Store raw report in Cloud Storage (encrypted)
+      const reportId = uuidv4();
+      const rawJsonPath = `tenants/${tenantId}/consumers/${validatedData.consumerId}/reports/${reportId}.json`;
+      const bucket = storage.bucket(firebaseConfig.storageBucket);
+      const file = bucket.file(rawJsonPath);
+      await file.save(JSON.stringify(scReport), {
+        contentType: "application/json",
+        metadata: { cacheControl: "private, max-age=0" },
+      });
+
+      // Create credit report entry
+      const report: Omit<CreditReport, "id"> = {
+        consumerId: validatedData.consumerId,
+        tenantId,
+        bureau,
+        pulledAt: FieldValue.serverTimestamp() as unknown as Timestamp,
+        rawJsonRef: rawJsonPath,
+        hash: "", // Would calculate in production
+        score: scReport.score,
+        scoreFactors: scReport.scoreFactors || [],
+        smartCreditReportId: scReport.id,
+        summary: {
+          totalAccounts: scReport.summary.totalAccounts,
+          openAccounts: scReport.summary.openAccounts,
+          closedAccounts: scReport.summary.closedAccounts,
+          delinquentAccounts: scReport.summary.delinquentCount,
+          derogatoryAccounts: scReport.summary.derogatoryCount,
+          totalBalance: scReport.summary.totalBalance,
+          totalCreditLimit: scReport.summary.totalCreditLimit,
+          utilizationPercent: scReport.summary.utilizationPercent,
+        },
+        publicRecords: scReport.publicRecords || [],
+        inquiries: (scReport.inquiries || []).map((inq) => ({
+          creditor: inq.creditorName,
+          date: inq.date,
+          type: inq.type === "H" ? "hard" : "soft",
+        })),
+        status: "processed",
+        createdAt: FieldValue.serverTimestamp() as unknown as Timestamp,
+        expiresAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
+      };
+
+      await db.collection("credit_reports").doc(reportId).set({ id: reportId, ...report });
+
+      // Store tradelines
+      for (const scTradeline of scReport.tradelines) {
+        const tradeline = smartCreditService.convertTradeline(
+          scTradeline,
+          reportId,
+          validatedData.consumerId,
+          tenantId,
+          bureau
+        );
+        await db.collection("tradelines").doc(tradeline.id).set({
+          ...tradeline,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+
+      results.push({ bureau, success: true });
+      logger.info("[Consumer] Credit report stored", {
+        consumerId: validatedData.consumerId,
+        bureau,
+        reportId,
+        tradelineCount: scReport.tradelines.length,
+      });
+    } catch (error) {
+      logger.error("[Consumer] Failed to fetch credit report", {
+        consumerId: validatedData.consumerId,
+        bureau,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      results.push({
+        bureau,
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   }
 
   // Update connection last refresh timestamp
@@ -842,11 +918,15 @@ async function reportsRefreshHandler(
     },
   });
 
+  const successfulBureaus = results.filter((r) => r.success).map((r) => r.bureau);
+  const failedBureaus = results.filter((r) => !r.success);
+
   return {
-    success: true,
+    success: failedBureaus.length === 0,
     data: {
       requested: true,
-      bureaus,
+      bureaus: successfulBureaus,
+      results,
     },
   };
 }

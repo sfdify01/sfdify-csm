@@ -30,6 +30,12 @@ import {
 } from "../../utils/errors";
 import { logAuditEvent } from "../../utils/audit";
 import {
+  generateAndUploadPdf,
+  generateLetterPdfPath,
+  markdownToHtml,
+} from "../../utils/pdfGenerator";
+import { lobService } from "../../services/lobService";
+import {
   Letter,
   LetterStatus,
   LetterTemplate,
@@ -44,7 +50,9 @@ import {
 } from "../../types";
 import { BUREAU_ADDRESSES } from "../../config";
 import { decryptPii } from "../../utils/encryption";
+import Handlebars from "handlebars";
 import Joi from "joi";
+import * as logger from "firebase-functions/logger";
 
 // ============================================================================
 // Constants
@@ -263,19 +271,73 @@ function performQualityChecks(
   };
 }
 
+// ============================================================================
+// Handlebars Configuration
+// ============================================================================
+
+// Register custom Handlebars helpers
+Handlebars.registerHelper("formatDate", (date: string | Date) => {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+});
+
+Handlebars.registerHelper("formatCurrency", (amount: number) => {
+  if (amount === undefined || amount === null) return "";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(amount);
+});
+
+Handlebars.registerHelper("uppercase", (str: string) => {
+  return str ? str.toUpperCase() : "";
+});
+
+Handlebars.registerHelper("lowercase", (str: string) => {
+  return str ? str.toLowerCase() : "";
+});
+
+Handlebars.registerHelper("eq", (a: unknown, b: unknown) => {
+  return a === b;
+});
+
+Handlebars.registerHelper("ne", (a: unknown, b: unknown) => {
+  return a !== b;
+});
+
+Handlebars.registerHelper("or", (...args: unknown[]) => {
+  // Remove the last argument (Handlebars options object)
+  args.pop();
+  return args.some(Boolean);
+});
+
+Handlebars.registerHelper("and", (...args: unknown[]) => {
+  // Remove the last argument (Handlebars options object)
+  args.pop();
+  return args.every(Boolean);
+});
+
 /**
- * Simple template rendering (in production, use Handlebars)
+ * Render template using Handlebars
  */
 function renderTemplate(
   template: string,
-  variables: Record<string, string | number | undefined>
+  variables: Record<string, string | number | undefined | null>
 ): string {
-  let rendered = template;
-  for (const [key, value] of Object.entries(variables)) {
-    const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "g");
-    rendered = rendered.replace(regex, String(value || ""));
+  try {
+    const compiled = Handlebars.compile(template, { strict: false });
+    return compiled(variables);
+  } catch (error) {
+    logger.error("[Letter] Template rendering error", { error });
+    // Fallback to simple replacement if Handlebars fails
+    let rendered = template;
+    for (const [key, value] of Object.entries(variables)) {
+      const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "g");
+      rendered = rendered.replace(regex, String(value || ""));
+    }
+    return rendered;
   }
-  return rendered;
 }
 
 // ============================================================================
@@ -623,37 +685,108 @@ async function sendLetterHandler(
     status: "pending",
   });
 
-  // Update to queued status
+  // Update to rendering status
   const mailType = validatedData.mailType || currentLetter.mailType;
-  const newStatusHistory = addStatusHistory(currentLetter.statusHistory, "queued", actorId);
-
-  // Calculate estimated cost (in production, get from Lob API)
-  const costEstimate = {
-    printing: 0.50,
-    postage: mailType === "usps_first_class" ? 0.55 :
-             mailType === "usps_certified" ? 3.75 : 7.50,
-    certifiedFee: mailType.includes("certified") ? 3.75 : undefined,
-    total: 0,
-    currency: "USD",
-  };
-  costEstimate.total = costEstimate.printing + costEstimate.postage + (costEstimate.certifiedFee || 0);
+  let newStatusHistory = addStatusHistory(currentLetter.statusHistory, "rendering", actorId);
 
   await letterRef.update({
-    status: "queued",
+    status: "rendering",
     statusHistory: newStatusHistory,
     mailType,
-    cost: costEstimate,
-    sentAt: FieldValue.serverTimestamp(),
   });
 
-  // In production, this would:
-  // 1. Generate PDF from content
-  // 2. Upload to Lob
-  // 3. Store lobId and lobUrl
-  // 4. Handle scheduled send if specified
+  try {
+    // Step 1: Generate PDF from content
+    logger.info("[Letter] Generating PDF", { letterId: validatedData.letterId });
 
-  // For now, simulate queued status
-  // The actual Lob integration would be handled by a separate background function
+    const contentHtml = currentLetter.contentHtml || markdownToHtml(currentLetter.contentMarkdown || "");
+    const storagePath = generateLetterPdfPath(tenantId, validatedData.letterId);
+
+    const pdfResult = await generateAndUploadPdf(contentHtml, storagePath, {
+      format: "Letter",
+      margin: { top: "1in", right: "1in", bottom: "1in", left: "1in" },
+    });
+
+    // Update with PDF info
+    await letterRef.update({
+      pdfUrl: pdfResult.signedUrl,
+      pdfHash: pdfResult.hash,
+      pdfSizeBytes: pdfResult.sizeBytes,
+      pageCount: pdfResult.pageCount,
+    });
+
+    // Step 2: Calculate cost estimate
+    const costEstimate = lobService.estimateCost(pdfResult.pageCount, mailType);
+
+    // Step 3: Send to Lob
+    logger.info("[Letter] Sending to Lob", {
+      letterId: validatedData.letterId,
+      mailType,
+      pageCount: pdfResult.pageCount,
+    });
+
+    const lobLetter = await lobService.createLetter({
+      to: currentLetter.recipientAddress,
+      from: currentLetter.returnAddress,
+      file: pdfResult.signedUrl,
+      fileType: "pdf",
+      description: `Dispute Letter - ${validatedData.letterId}`,
+      mailType,
+      metadata: {
+        letterId: validatedData.letterId,
+        tenantId,
+        disputeId: currentLetter.disputeId,
+      },
+      idempotencyKey: validatedData.idempotencyKey,
+    });
+
+    // Step 4: Update letter with Lob info
+    newStatusHistory = addStatusHistory(newStatusHistory, "queued", actorId);
+
+    await letterRef.update({
+      status: "queued",
+      statusHistory: newStatusHistory,
+      lobId: lobLetter.id,
+      lobUrl: lobLetter.url,
+      trackingNumber: lobLetter.tracking_number,
+      "mailTypeDetail.service": lobLetter.carrier,
+      "mailTypeDetail.returnReceipt": mailType === "usps_certified_return_receipt",
+      "mailTypeDetail.extraService": lobLetter.extra_service,
+      cost: {
+        printing: costEstimate.printing,
+        postage: costEstimate.postage,
+        certifiedFee: costEstimate.certifiedFee,
+        total: costEstimate.total,
+        currency: costEstimate.currency,
+      },
+      sentAt: FieldValue.serverTimestamp(),
+      "qualityChecks.pdfIntegrityVerified": true,
+    });
+
+    logger.info("[Letter] Successfully queued with Lob", {
+      letterId: validatedData.letterId,
+      lobId: lobLetter.id,
+      expectedDelivery: lobLetter.expected_delivery_date,
+    });
+  } catch (error) {
+    // Revert to draft status on failure
+    logger.error("[Letter] Failed to send letter", {
+      letterId: validatedData.letterId,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    newStatusHistory = addStatusHistory(currentLetter.statusHistory, "draft", actorId);
+    await letterRef.update({
+      status: "draft",
+      statusHistory: newStatusHistory,
+    });
+
+    throw new AppError(
+      ErrorCode.EXTERNAL_SERVICE_ERROR,
+      `Failed to send letter: ${error instanceof Error ? error.message : "Unknown error"}`,
+      500
+    );
+  }
 
   // Get updated letter
   const updatedDoc = await letterRef.get();

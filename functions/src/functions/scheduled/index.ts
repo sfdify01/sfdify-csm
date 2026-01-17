@@ -10,7 +10,9 @@ import { db } from "../../admin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { slaConfig } from "../../config";
 import { logAuditEvent } from "../../utils/audit";
-import { Dispute, Consumer, Letter, Tenant, SmartCreditConnection } from "../../types";
+import { emailService } from "../../services/emailService";
+import { smsService } from "../../services/smsService";
+import { Dispute, Consumer, Letter, Tenant, SmartCreditConnection, User } from "../../types";
 import { v4 as uuidv4 } from "uuid";
 
 // ============================================================================
@@ -24,7 +26,50 @@ const BATCH_SIZE = 100;
 // ============================================================================
 
 /**
- * Send notification to users (placeholder - integrate with SendGrid/Twilio)
+ * Get tenant notification recipients (owners and operators)
+ */
+async function getTenantNotifyUsers(
+  tenantId: string
+): Promise<Array<{ email: string; phone?: string; role: string }>> {
+  const usersSnapshot = await db
+    .collection("users")
+    .where("tenantId", "==", tenantId)
+    .where("role", "in", ["owner", "operator"])
+    .where("disabled", "==", false)
+    .get();
+
+  return usersSnapshot.docs.map((doc) => {
+    const user = doc.data() as User;
+    return {
+      email: user.email,
+      phone: undefined, // Would get from user profile
+      role: user.role,
+    };
+  });
+}
+
+/**
+ * Get consumer name and info for notifications
+ */
+async function getConsumerInfo(
+  consumerId: string
+): Promise<{ name: string; email?: string; phone?: string }> {
+  const consumerDoc = await db.collection("consumers").doc(consumerId).get();
+  if (!consumerDoc.exists) {
+    return { name: "Consumer" };
+  }
+  const consumer = consumerDoc.data() as Consumer;
+  const primaryEmail = consumer.emails?.find((e) => e.isPrimary);
+  const primaryPhone = consumer.phones?.find((p) => p.isPrimary);
+  return {
+    name: "Consumer", // PII is encrypted, would need to decrypt for display
+    email: primaryEmail?.address,
+    phone: primaryPhone?.number,
+  };
+}
+
+/**
+ * Send notification to users via email and SMS
  */
 async function sendNotification(
   tenantId: string,
@@ -33,37 +78,138 @@ async function sendNotification(
 ): Promise<void> {
   // Create notification record
   const notificationId = uuidv4();
-  await db.collection("notifications").doc(notificationId).set({
+  const notificationRecord = {
     id: notificationId,
     tenantId,
     type,
     data,
     status: "pending",
     createdAt: FieldValue.serverTimestamp(),
-    channels: ["email"], // Can add "sms", "push"
+    channels: ["email"],
+    deliveryResults: [] as Array<{ channel: string; success: boolean; error?: string }>,
+  };
+
+  await db.collection("notifications").doc(notificationId).set(notificationRecord);
+
+  // Get recipients
+  const recipients = await getTenantNotifyUsers(tenantId);
+  const deliveryResults: Array<{ channel: string; success: boolean; error?: string }> = [];
+
+  // Get consumer info if available
+  let consumerName = "Consumer";
+  if (data.consumerId) {
+    const consumerInfo = await getConsumerInfo(data.consumerId as string);
+    consumerName = consumerInfo.name;
+  }
+
+  // Send emails based on notification type
+  for (const recipient of recipients) {
+    try {
+      switch (type) {
+        case "sla_warning":
+          const slaResult = await emailService.sendSlaReminder(recipient.email, {
+            consumerName,
+            disputeId: data.disputeId as string,
+            bureau: data.bureau as string || "Bureau",
+            daysRemaining: data.daysUntilDue as number,
+            dueDate: data.dueAt as string,
+            disputeUrl: `https://app.sfdify.com/disputes/${data.disputeId}`,
+          });
+          deliveryResults.push({
+            channel: "email",
+            success: slaResult.success,
+            error: slaResult.error,
+          });
+
+          // Also send SMS for urgent SLA reminders (1 day or less)
+          if ((data.daysUntilDue as number) <= 1 && recipient.phone) {
+            const smsResult = await smsService.sendSlaReminder(
+              recipient.phone,
+              data.daysUntilDue as number,
+              data.bureau as string || "Bureau"
+            );
+            deliveryResults.push({
+              channel: "sms",
+              success: smsResult.success,
+              error: smsResult.error,
+            });
+          }
+          break;
+
+        case "sla_breach":
+          const breachResult = await emailService.send({
+            to: recipient.email,
+            subject: `URGENT: SLA Breach - Dispute ${data.disputeId}`,
+            text: `A dispute for ${consumerName} has breached its SLA deadline. The dispute was due on ${data.dueAt} and is now ${data.daysOverdue} days overdue. Please take immediate action.`,
+            categories: ["sla-breach", "urgent"],
+          });
+          deliveryResults.push({
+            channel: "email",
+            success: breachResult.success,
+            error: breachResult.error,
+          });
+          break;
+
+        case "report_available":
+          const reportResult = await emailService.send({
+            to: recipient.email,
+            subject: `Credit Report Available - ${consumerName}`,
+            text: `A new credit report is available for ${consumerName}. Log in to view the details.`,
+            categories: ["credit-report"],
+          });
+          deliveryResults.push({
+            channel: "email",
+            success: reportResult.success,
+            error: reportResult.error,
+          });
+          break;
+
+        case "billing_due":
+          const billingResult = await emailService.send({
+            to: recipient.email,
+            subject: `Monthly Invoice Ready - ${data.period}`,
+            text: `Your monthly invoice for ${data.period} is ready. Total due: $${data.total}. Log in to view details and pay.`,
+            categories: ["billing"],
+          });
+          deliveryResults.push({
+            channel: "email",
+            success: billingResult.success,
+            error: billingResult.error,
+          });
+          break;
+      }
+    } catch (error) {
+      functions.logger.error("Failed to send notification", {
+        notificationId,
+        recipient: recipient.email,
+        type,
+        error,
+      });
+      deliveryResults.push({
+        channel: "email",
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
+  // Update notification record with results
+  const allSuccessful = deliveryResults.every((r) => r.success);
+  await db.collection("notifications").doc(notificationId).update({
+    status: allSuccessful ? "sent" : "partial",
+    deliveryResults,
+    sentAt: FieldValue.serverTimestamp(),
   });
 
-  // TODO: Integrate with SendGrid/Twilio for actual notification delivery
-  functions.logger.info("Notification created", { notificationId, tenantId, type });
+  functions.logger.info("Notification processed", {
+    notificationId,
+    tenantId,
+    type,
+    recipientCount: recipients.length,
+    successCount: deliveryResults.filter((r) => r.success).length,
+  });
 }
 
-/**
- * Get users to notify for a tenant (owners and operators)
- * Reserved for future use with more complex notification workflows
- */
-async function _getTenantNotifyUsers(tenantId: string): Promise<string[]> {
-  const usersSnapshot = await db
-    .collection("users")
-    .where("tenantId", "==", tenantId)
-    .where("role", "in", ["owner", "operator"])
-    .where("disabled", "==", false)
-    .get();
-
-  return usersSnapshot.docs.map((doc) => doc.id);
-}
-
-// Suppress unused function warning - reserved for future notification workflows
-void _getTenantNotifyUsers;
 
 // ============================================================================
 // scheduledSlaChecker - Check SLA deadlines
