@@ -28,11 +28,11 @@ class _LoginPageState extends State<LoginPage> {
   void _onLogin() {
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
-            AuthLoginRequested(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-            ),
-          );
+        AuthLoginRequested(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        ),
+      );
     }
   }
 
@@ -165,7 +165,7 @@ class _LoginPageState extends State<LoginPage> {
                                       child: Text(
                                         state.errorMessage!,
                                         style: TextStyle(
-                                          color: theme.colorScheme.error,
+                                          color: theme.colorScheme.onErrorContainer,
                                         ),
                                       ),
                                     ),
@@ -220,9 +220,9 @@ class _LoginPageState extends State<LoginPage> {
                       OutlinedButton.icon(
                         onPressed: state.status == AuthStatus.loading
                             ? null
-                            : () => context
-                                .read<AuthBloc>()
-                                .add(const AuthGoogleSignInRequested()),
+                            : () => context.read<AuthBloc>().add(
+                                const AuthGoogleSignInRequested(),
+                              ),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size.fromHeight(48),
                         ),

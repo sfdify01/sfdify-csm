@@ -321,36 +321,48 @@ class FirebaseAuthService {
   Future<AuthState?> _mapUserToAuthState(User? user) async {
     if (user == null) return null;
 
-    // Get the ID token result to access custom claims
-    final tokenResult = await user.getIdTokenResult();
-    final claims = tokenResult.claims;
+    try {
+      // Get the ID token result to access custom claims
+      final tokenResult = await user.getIdTokenResult();
+      final claims = tokenResult.claims;
 
-    final tenantId = claims?['tenantId'] as String?;
-    final roleStr = claims?['role'] as String?;
-    final permissionsList = claims?['permissions'] as List<dynamic>?;
+      final tenantId = claims?['tenantId'] as String?;
+      final roleStr = claims?['role'] as String?;
+      final permissionsList = claims?['permissions'] as List<dynamic>?;
 
-    // User must have tenantId and role claims
-    if (tenantId == null || roleStr == null) {
+      // User must have tenantId and role claims
+      if (tenantId == null || roleStr == null) {
+        return null;
+      }
+
+      // Parse role
+      final role = UserRole.values.firstWhere(
+        (r) => r.name == roleStr,
+        orElse: () => UserRole.viewer,
+      );
+
+      // Parse permissions
+      final permissions =
+          permissionsList?.map((p) => p.toString()).toList() ?? [];
+
+      return AuthState(
+        userId: user.uid,
+        tenantId: tenantId,
+        email: user.email ?? '',
+        role: role,
+        permissions: permissions,
+        displayName: user.displayName,
+      );
+    } on FirebaseAuthException catch (e) {
+      // Handle invalid refresh token by signing out
+      if (e.code == 'invalid-refresh-token' ||
+          e.code == 'network-request-failed') {
+        await signOut();
+      }
+      return null;
+    } catch (e) {
+      // For any other errors, just return null
       return null;
     }
-
-    // Parse role
-    final role = UserRole.values.firstWhere(
-      (r) => r.name == roleStr,
-      orElse: () => UserRole.viewer,
-    );
-
-    // Parse permissions
-    final permissions =
-        permissionsList?.map((p) => p.toString()).toList() ?? [];
-
-    return AuthState(
-      userId: user.uid,
-      tenantId: tenantId,
-      email: user.email ?? '',
-      role: role,
-      permissions: permissions,
-      displayName: user.displayName,
-    );
   }
 }

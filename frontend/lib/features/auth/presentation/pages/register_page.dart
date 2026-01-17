@@ -340,7 +340,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                   child: Text(
                                     state.errorMessage!,
                                     style: TextStyle(
-                                      color: theme.colorScheme.error,
+                                      color: theme.colorScheme.onErrorContainer,
                                     ),
                                   ),
                                 ),

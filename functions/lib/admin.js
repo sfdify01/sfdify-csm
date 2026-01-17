@@ -47,6 +47,9 @@ const admin = __importStar(require("firebase-admin"));
 admin.initializeApp();
 // Export Firestore and Auth instances for use throughout the app
 exports.db = admin.firestore();
+// Configure Firestore to ignore undefined values
+// This prevents errors when trying to save documents with undefined fields
+exports.db.settings({ ignoreUndefinedProperties: true });
 exports.auth = admin.auth();
 exports.storage = admin.storage();
 //# sourceMappingURL=admin.js.map

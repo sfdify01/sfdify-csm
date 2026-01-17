@@ -14,5 +14,10 @@ admin.initializeApp();
 
 // Export Firestore and Auth instances for use throughout the app
 export const db = admin.firestore();
+
+// Configure Firestore to ignore undefined values
+// This prevents errors when trying to save documents with undefined fields
+db.settings({ ignoreUndefinedProperties: true });
+
 export const auth = admin.auth();
 export const storage = admin.storage();

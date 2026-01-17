@@ -40,16 +40,45 @@ Future<void> bootstrap(FutureOr<Widget> Function() builder) async {
     );
   }
 
-  // Initialize Crashlytics error handling
-  FlutterError.onError = (errorDetails) {
-    FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-  };
+  // Initialize Crashlytics error handling (only on supported platforms)
+  // Crashlytics is not supported on web or in emulator mode
+  if (!kIsWeb && !FirebaseConfig.useEmulator) {
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    };
 
-  // Pass all uncaught asynchronous errors to Crashlytics
-  PlatformDispatcher.instance.onError = (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-    return true;
-  };
+    // Pass all uncaught asynchronous errors to Crashlytics
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  } else {
+    // For web and emulator, just log errors to console
+    FlutterError.onError = (errorDetails) {
+      // Filter out known Flutter web trackpad gesture assertion errors
+      final errorString = errorDetails.exception.toString();
+      if (errorString.contains('PointerDeviceKind.trackpad') ||
+          errorString.contains('isCrashlyticsCollectionEnabled')) {
+        // Ignore known development/web platform issues
+        return;
+      }
+      debugPrint('Flutter error: ${errorDetails.exception}');
+      debugPrint('Stack trace: ${errorDetails.stack}');
+    };
+
+    PlatformDispatcher.instance.onError = (error, stack) {
+      // Filter out known Flutter web trackpad gesture assertion errors
+      final errorString = error.toString();
+      if (errorString.contains('PointerDeviceKind.trackpad') ||
+          errorString.contains('isCrashlyticsCollectionEnabled')) {
+        // Ignore known development/web platform issues
+        return true;
+      }
+      debugPrint('Uncaught error: $error');
+      debugPrint('Stack trace: $stack');
+      return true;
+    };
+  }
 
   // Initialize Hive for web
   await Hive.initFlutter();

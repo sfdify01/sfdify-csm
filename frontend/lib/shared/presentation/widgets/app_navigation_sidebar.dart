@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sfdify_scm/core/router/route_names.dart';
+import 'package:sfdify_scm/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:sfdify_scm/shared/presentation/widgets/navigation_menu_item.dart';
 import 'package:sfdify_scm/shared/presentation/widgets/user_profile_card.dart';
 
@@ -15,6 +17,37 @@ class AppNavigationSidebar extends StatelessWidget {
   });
 
   final String currentRoute;
+
+  /// Show confirmation dialog before logging out
+  Future<void> _showLogoutDialog(BuildContext context) async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: colorScheme.error,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if ((confirmed ?? false) && context.mounted) {
+      context.read<AuthBloc>().add(const AuthLogoutRequested());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -175,16 +208,11 @@ class AppNavigationSidebar extends StatelessWidget {
           const Divider(height: 1),
 
           // User profile at bottom
-          UserProfileCard(
-            name: 'Jane Smith',
-            role: 'Operator Admin',
-            initials: 'JS',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Profile page coming soon'),
-                  duration: Duration(seconds: 1),
-                ),
+          BlocBuilder<AuthBloc, AuthBlocState>(
+            builder: (context, state) {
+              return UserProfileCard(
+                authState: state.user,
+                onLogout: () => _showLogoutDialog(context),
               );
             },
           ),
