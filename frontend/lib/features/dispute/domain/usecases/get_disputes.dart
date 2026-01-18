@@ -1,10 +1,10 @@
 import 'package:equatable/equatable.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/core/error/failures.dart';
-import 'package:sfdify_scm/core/usecase/usecase.dart';
-import 'package:sfdify_scm/features/dispute/domain/entities/dispute_entity.dart';
-import 'package:sfdify_scm/features/dispute/domain/repositories/dispute_repository.dart';
+import 'package:ustaxx_csm/core/error/failures.dart';
+import 'package:ustaxx_csm/core/usecase/usecase.dart';
+import 'package:ustaxx_csm/features/dispute/domain/entities/dispute_entity.dart';
+import 'package:ustaxx_csm/features/dispute/domain/repositories/dispute_repository.dart';
 
 @injectable
 class GetDisputes implements UseCase<List<DisputeEntity>, GetDisputesParams> {

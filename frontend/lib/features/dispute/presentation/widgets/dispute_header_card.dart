@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:sfdify_scm/features/dispute/domain/entities/dispute_entity.dart';
+import 'package:ustaxx_csm/features/dispute/domain/entities/dispute_entity.dart';
 
 class DisputeHeaderCard extends StatelessWidget {
   const DisputeHeaderCard({

@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:sfdify_scm/features/letter/domain/entities/evidence_entity.dart';
+import 'package:ustaxx_csm/features/letter/domain/entities/evidence_entity.dart';
 
 part 'evidence_model.g.dart';
 

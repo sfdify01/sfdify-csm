@@ -9,10 +9,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
-import 'package:sfdify_scm/core/config/feature_flags.dart';
-import 'package:sfdify_scm/core/config/firebase_config.dart';
-import 'package:sfdify_scm/firebase_options.dart';
-import 'package:sfdify_scm/injection/injection.dart';
+import 'package:ustaxx_csm/core/config/feature_flags.dart';
+import 'package:ustaxx_csm/core/config/firebase_config.dart';
+import 'package:ustaxx_csm/firebase_options.dart';
+import 'package:ustaxx_csm/injection/injection.dart';
 
 Future<void> bootstrap(FutureOr<Widget> Function() builder) async {
   WidgetsFlutterBinding.ensureInitialized();

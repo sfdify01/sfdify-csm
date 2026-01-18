@@ -1,10 +1,10 @@
-# SFDIFY Cloud Functions
+# USTAXX Cloud Functions
 
-Firebase Cloud Functions for the SFDIFY Credit Dispute System.
+Firebase Cloud Functions for the USTAXX Credit Dispute System.
 
 ## Overview
 
-This directory contains all serverless Cloud Functions for SFDIFY, organized by domain:
+This directory contains all serverless Cloud Functions for USTAXX, organized by domain:
 
 - **Consumers**: Consumer profile and credit report management
 - **Disputes**: Dispute case creation and workflow
@@ -54,7 +54,7 @@ Cloud KMS is required for encrypting personally identifiable information (PII):
 ```
 
 This creates:
-- Key ring: `sfdify-pii`
+- Key ring: `ustaxx-pii`
 - Crypto key: `pii-encryption-key`
 - Proper IAM permissions for Cloud Functions
 

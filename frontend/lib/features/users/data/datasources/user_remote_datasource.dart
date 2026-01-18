@@ -1,6 +1,6 @@
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/core/services/cloud_functions_service.dart';
-import 'package:sfdify_scm/features/users/data/models/user_model.dart';
+import 'package:ustaxx_csm/core/services/cloud_functions_service.dart';
+import 'package:ustaxx_csm/features/users/data/models/user_model.dart';
 
 abstract class UserRemoteDataSource {
   Future<List<UserModel>> getUsers({int? limit, String? cursor});

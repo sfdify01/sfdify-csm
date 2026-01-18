@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sfdify_scm/features/dispute/presentation/bloc/dispute_create_bloc.dart';
-import 'package:sfdify_scm/features/dispute/presentation/bloc/dispute_create_event.dart';
-import 'package:sfdify_scm/features/dispute/presentation/bloc/dispute_create_state.dart';
-import 'package:sfdify_scm/features/dispute/presentation/widgets/bureau_selector.dart';
-import 'package:sfdify_scm/features/dispute/presentation/widgets/consumer_selector.dart';
-import 'package:sfdify_scm/features/dispute/presentation/widgets/dispute_type_selector.dart';
-import 'package:sfdify_scm/features/dispute/presentation/widgets/reason_code_picker.dart';
-import 'package:sfdify_scm/injection/injection.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/bloc/dispute_create_bloc.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/bloc/dispute_create_event.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/bloc/dispute_create_state.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/widgets/bureau_selector.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/widgets/consumer_selector.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/widgets/dispute_type_selector.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/widgets/reason_code_picker.dart';
+import 'package:ustaxx_csm/injection/injection.dart';
 
 class DisputeCreatePage extends StatelessWidget {
   const DisputeCreatePage({

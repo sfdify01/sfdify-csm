@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sfdify_scm/shared/presentation/widgets/app_navigation_sidebar.dart';
+import 'package:ustaxx_csm/shared/presentation/widgets/app_navigation_sidebar.dart';
 
 /// Main layout wrapper that adds the navigation sidebar to pages
 ///

@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:sfdify_scm/features/letter/domain/entities/letter_entity.dart';
+import 'package:ustaxx_csm/features/letter/domain/entities/letter_entity.dart';
 
 enum LetterDetailStatus { initial, loading, success, failure }
 

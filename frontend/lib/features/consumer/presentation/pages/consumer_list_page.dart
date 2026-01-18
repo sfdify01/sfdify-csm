@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sfdify_scm/features/consumer/domain/entities/consumer_entity.dart';
-import 'package:sfdify_scm/features/consumer/presentation/bloc/consumer_list_bloc.dart';
-import 'package:sfdify_scm/features/consumer/presentation/bloc/consumer_list_event.dart';
-import 'package:sfdify_scm/features/consumer/presentation/bloc/consumer_list_state.dart';
-import 'package:sfdify_scm/features/consumer/presentation/widgets/consumer_filter_chips.dart';
-import 'package:sfdify_scm/features/consumer/presentation/widgets/consumer_list_item.dart';
-import 'package:sfdify_scm/features/consumer/presentation/widgets/consumer_search_bar.dart';
-import 'package:sfdify_scm/injection/injection.dart';
+import 'package:ustaxx_csm/features/consumer/domain/entities/consumer_entity.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_list_bloc.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_list_event.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_list_state.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/widgets/consumer_filter_chips.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/widgets/consumer_list_item.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/widgets/consumer_search_bar.dart';
+import 'package:ustaxx_csm/injection/injection.dart';
 
 class ConsumerListPage extends StatelessWidget {
   const ConsumerListPage({super.key});

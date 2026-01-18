@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:sfdify_scm/features/letter/domain/entities/letter_entity.dart';
-import 'package:sfdify_scm/shared/domain/entities/address_entity.dart';
+import 'package:ustaxx_csm/features/letter/domain/entities/letter_entity.dart';
+import 'package:ustaxx_csm/shared/domain/entities/address_entity.dart';
 
 part 'letter_model.g.dart';
 

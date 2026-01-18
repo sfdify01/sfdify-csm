@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:sfdify_scm/features/consumer/domain/entities/consumer_entity.dart';
+import 'package:ustaxx_csm/features/consumer/domain/entities/consumer_entity.dart';
 
 enum ConsumerFormStatus {
   initial,

@@ -3,7 +3,7 @@
 # Cloud KMS Setup Script for PII Encryption
 # ============================================================================
 # This script creates a Cloud KMS key ring and crypto key for encrypting
-# Personally Identifiable Information (PII) in the SFDIFY system.
+# Personally Identifiable Information (PII) in the USTAXX system.
 # ============================================================================
 
 set -e
@@ -11,11 +11,11 @@ set -e
 # Configuration
 PROJECT_ID="ustaxx-csm"
 LOCATION="global"
-KEY_RING="sfdify-pii"
+KEY_RING="ustaxx-pii"
 CRYPTO_KEY="pii-encryption-key"
 
 echo "========================================="
-echo "Cloud KMS Setup for SFDIFY"
+echo "Cloud KMS Setup for USTAXX"
 echo "========================================="
 echo "Project: $PROJECT_ID"
 echo "Location: $LOCATION"

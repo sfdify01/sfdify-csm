@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
-import 'package:sfdify_scm/features/letter/domain/entities/letter_entity.dart';
-import 'package:sfdify_scm/features/letter/presentation/widgets/letter_status_chip.dart';
+import 'package:ustaxx_csm/features/letter/domain/entities/letter_entity.dart';
+import 'package:ustaxx_csm/features/letter/presentation/widgets/letter_status_chip.dart';
 
 class LetterListItem extends StatelessWidget {
   const LetterListItem({

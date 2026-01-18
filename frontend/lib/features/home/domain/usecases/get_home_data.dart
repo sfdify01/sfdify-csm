@@ -1,9 +1,9 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/core/error/failures.dart';
-import 'package:sfdify_scm/core/usecase/usecase.dart';
-import 'package:sfdify_scm/features/home/domain/entities/home_entity.dart';
-import 'package:sfdify_scm/features/home/domain/repositories/home_repository.dart';
+import 'package:ustaxx_csm/core/error/failures.dart';
+import 'package:ustaxx_csm/core/usecase/usecase.dart';
+import 'package:ustaxx_csm/features/home/domain/entities/home_entity.dart';
+import 'package:ustaxx_csm/features/home/domain/repositories/home_repository.dart';
 
 @injectable
 class GetHomeData implements UseCase<List<HomeEntity>, NoParams> {

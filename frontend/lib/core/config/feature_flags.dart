@@ -1,7 +1,7 @@
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:injectable/injectable.dart';
 import 'package:logger/logger.dart';
-import 'package:sfdify_scm/core/config/firebase_config.dart';
+import 'package:ustaxx_csm/core/config/firebase_config.dart';
 
 /// Feature flag service using Firebase Remote Config.
 ///

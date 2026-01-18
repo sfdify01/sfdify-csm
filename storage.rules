@@ -51,10 +51,10 @@ service firebase.storage {
 
     // ========================================================================
     // LETTERS BUCKET - Generated PDFs
-    // sfdify-letters/{tenantId}/{disputeId}/{letterId}.pdf
+    // ustaxx-letters/{tenantId}/{disputeId}/{letterId}.pdf
     // ========================================================================
 
-    match /sfdify-letters/{tenantId}/{allPaths=**} {
+    match /ustaxx-letters/{tenantId}/{allPaths=**} {
       // Users can read letters from their tenant
       allow read: if isAuthenticated()
         && getTenantId() == tenantId
@@ -66,10 +66,10 @@ service firebase.storage {
 
     // ========================================================================
     // EVIDENCE BUCKET - Uploaded evidence files
-    // sfdify-evidence/{tenantId}/{disputeId}/{evidenceId}/{filename}
+    // ustaxx-evidence/{tenantId}/{disputeId}/{evidenceId}/{filename}
     // ========================================================================
 
-    match /sfdify-evidence/{tenantId}/{disputeId}/{evidenceId}/{filename} {
+    match /ustaxx-evidence/{tenantId}/{disputeId}/{evidenceId}/{filename} {
       // Users can read evidence from their tenant
       allow read: if isAuthenticated()
         && getTenantId() == tenantId
@@ -82,10 +82,10 @@ service firebase.storage {
 
     // ========================================================================
     // TEMPLATES BUCKET - Tenant branding assets
-    // sfdify-templates/{tenantId}/branding/{filename}
+    // ustaxx-templates/{tenantId}/branding/{filename}
     // ========================================================================
 
-    match /sfdify-templates/{tenantId}/branding/{filename} {
+    match /ustaxx-templates/{tenantId}/branding/{filename} {
       // Users can read branding from their tenant
       allow read: if isAuthenticated()
         && getTenantId() == tenantId
@@ -101,10 +101,10 @@ service firebase.storage {
 
     // ========================================================================
     // EXPORTS BUCKET - Audit exports, CFPB packages
-    // sfdify-exports/{tenantId}/{exportId}/{filename}
+    // ustaxx-exports/{tenantId}/{exportId}/{filename}
     // ========================================================================
 
-    match /sfdify-exports/{tenantId}/{allPaths=**} {
+    match /ustaxx-exports/{tenantId}/{allPaths=**} {
       // Only owners and auditors can read exports
       allow read: if isAuthenticated()
         && getTenantId() == tenantId

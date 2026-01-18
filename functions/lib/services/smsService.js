@@ -48,14 +48,14 @@ const config_1 = require("../config");
 const logger = __importStar(require("firebase-functions/logger"));
 // SMS message templates
 exports.SMS_TEMPLATES = {
-    SLA_REMINDER: (daysRemaining, bureau) => `SFDIFY Alert: Your ${bureau} dispute has ${daysRemaining} day(s) until SLA deadline. Login to take action.`,
-    LETTER_SENT: (bureau) => `SFDIFY: Your dispute letter to ${bureau} has been sent! You'll receive tracking info soon.`,
-    LETTER_DELIVERED: (bureau) => `SFDIFY: Great news! Your dispute letter to ${bureau} was delivered successfully.`,
-    LETTER_RETURNED: (bureau) => `SFDIFY Alert: Your letter to ${bureau} was returned. Please login to review and resend.`,
-    DISPUTE_RESOLVED: (bureau, outcome) => `SFDIFY: Your ${bureau} dispute has been resolved with outcome: ${outcome}. Login for details.`,
-    CREDIT_ALERT: (alertType) => `SFDIFY Credit Alert: ${alertType}. Login to your account for more details.`,
-    VERIFICATION_CODE: (code) => `Your SFDIFY verification code is: ${code}. This code expires in 10 minutes.`,
-    PASSWORD_RESET: () => `SFDIFY: A password reset was requested for your account. If this wasn't you, please contact support.`,
+    SLA_REMINDER: (daysRemaining, bureau) => `USTAXX Alert: Your ${bureau} dispute has ${daysRemaining} day(s) until SLA deadline. Login to take action.`,
+    LETTER_SENT: (bureau) => `USTAXX: Your dispute letter to ${bureau} has been sent! You'll receive tracking info soon.`,
+    LETTER_DELIVERED: (bureau) => `USTAXX: Great news! Your dispute letter to ${bureau} was delivered successfully.`,
+    LETTER_RETURNED: (bureau) => `USTAXX Alert: Your letter to ${bureau} was returned. Please login to review and resend.`,
+    DISPUTE_RESOLVED: (bureau, outcome) => `USTAXX: Your ${bureau} dispute has been resolved with outcome: ${outcome}. Login for details.`,
+    CREDIT_ALERT: (alertType) => `USTAXX Credit Alert: ${alertType}. Login to your account for more details.`,
+    VERIFICATION_CODE: (code) => `Your USTAXX verification code is: ${code}. This code expires in 10 minutes.`,
+    PASSWORD_RESET: () => `USTAXX: A password reset was requested for your account. If this wasn't you, please contact support.`,
 };
 // ============================================================================
 // SMS Service Class

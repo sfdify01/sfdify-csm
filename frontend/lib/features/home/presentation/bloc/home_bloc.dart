@@ -2,9 +2,9 @@ import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/core/usecase/usecase.dart';
-import 'package:sfdify_scm/features/home/domain/entities/home_entity.dart';
-import 'package:sfdify_scm/features/home/domain/usecases/get_home_data.dart';
+import 'package:ustaxx_csm/core/usecase/usecase.dart';
+import 'package:ustaxx_csm/features/home/domain/entities/home_entity.dart';
+import 'package:ustaxx_csm/features/home/domain/usecases/get_home_data.dart';
 
 part 'home_event.dart';
 part 'home_state.dart';

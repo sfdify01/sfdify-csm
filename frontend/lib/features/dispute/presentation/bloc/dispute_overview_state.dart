@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
-import 'package:sfdify_scm/features/dispute/domain/entities/dispute_entity.dart';
-import 'package:sfdify_scm/shared/domain/entities/dispute_metrics_entity.dart';
+import 'package:ustaxx_csm/features/dispute/domain/entities/dispute_entity.dart';
+import 'package:ustaxx_csm/shared/domain/entities/dispute_metrics_entity.dart';
 
 enum DisputeOverviewStatus { initial, loading, success, failure }
 

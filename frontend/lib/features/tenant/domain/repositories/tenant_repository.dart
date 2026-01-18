@@ -1,6 +1,6 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:sfdify_scm/core/error/failures.dart';
-import 'package:sfdify_scm/features/tenant/domain/entities/tenant_entity.dart';
+import 'package:ustaxx_csm/core/error/failures.dart';
+import 'package:ustaxx_csm/features/tenant/domain/entities/tenant_entity.dart';
 
 abstract class TenantRepository {
   /// Gets the current tenant (from auth token's tenantId)

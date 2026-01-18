@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sfdify_scm/features/dispute/domain/entities/dispute_entity.dart';
+import 'package:ustaxx_csm/features/dispute/domain/entities/dispute_entity.dart';
 
 class ConsumerDisputesTab extends StatelessWidget {
   const ConsumerDisputesTab({

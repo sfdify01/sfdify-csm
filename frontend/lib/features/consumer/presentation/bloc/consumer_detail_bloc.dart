@@ -1,9 +1,9 @@
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/features/consumer/domain/usecases/get_consumer.dart';
-import 'package:sfdify_scm/features/consumer/presentation/bloc/consumer_detail_event.dart';
-import 'package:sfdify_scm/features/consumer/presentation/bloc/consumer_detail_state.dart';
+import 'package:ustaxx_csm/features/consumer/domain/usecases/get_consumer.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_detail_event.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_detail_state.dart';
 
 @injectable
 class ConsumerDetailBloc

@@ -1,7 +1,7 @@
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/core/services/cloud_functions_service.dart';
-import 'package:sfdify_scm/features/home/data/models/home_model.dart';
-import 'package:sfdify_scm/shared/data/models/dispute_metrics_model.dart';
+import 'package:ustaxx_csm/core/services/cloud_functions_service.dart';
+import 'package:ustaxx_csm/features/home/data/models/home_model.dart';
+import 'package:ustaxx_csm/shared/data/models/dispute_metrics_model.dart';
 
 abstract class HomeRemoteDataSource {
   Future<List<HomeModel>> getHomeData();

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:injectable/injectable.dart';
 import 'package:logger/logger.dart';
-import 'package:sfdify_scm/core/services/cloud_functions_service.dart';
+import 'package:ustaxx_csm/core/services/cloud_functions_service.dart';
 
 /// User role types matching backend
 enum UserRole { owner, operator, viewer, auditor }

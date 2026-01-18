@@ -2,14 +2,14 @@ import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/core/error/failures.dart';
-import 'package:sfdify_scm/core/usecase/usecase.dart';
-import 'package:sfdify_scm/features/dispute/domain/entities/dispute_entity.dart';
-import 'package:sfdify_scm/features/dispute/domain/usecases/get_dispute_metrics.dart';
-import 'package:sfdify_scm/features/dispute/domain/usecases/get_disputes.dart';
-import 'package:sfdify_scm/features/dispute/presentation/bloc/dispute_overview_event.dart';
-import 'package:sfdify_scm/features/dispute/presentation/bloc/dispute_overview_state.dart';
-import 'package:sfdify_scm/shared/domain/entities/dispute_metrics_entity.dart';
+import 'package:ustaxx_csm/core/error/failures.dart';
+import 'package:ustaxx_csm/core/usecase/usecase.dart';
+import 'package:ustaxx_csm/features/dispute/domain/entities/dispute_entity.dart';
+import 'package:ustaxx_csm/features/dispute/domain/usecases/get_dispute_metrics.dart';
+import 'package:ustaxx_csm/features/dispute/domain/usecases/get_disputes.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/bloc/dispute_overview_event.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/bloc/dispute_overview_state.dart';
+import 'package:ustaxx_csm/shared/domain/entities/dispute_metrics_entity.dart';
 
 @injectable
 class DisputeOverviewBloc

@@ -1,5 +1,5 @@
 /**
- * SFDIFY Type Definitions
+ * USTAXX Type Definitions
  *
  * Core TypeScript interfaces for all entities in the system.
  * Based on ARCHITECTURE.md ERD and JSON examples.

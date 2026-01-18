@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sfdify_scm/core/router/route_names.dart';
-import 'package:sfdify_scm/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:sfdify_scm/shared/presentation/widgets/navigation_menu_item.dart';
-import 'package:sfdify_scm/shared/presentation/widgets/user_profile_card.dart';
+import 'package:ustaxx_csm/core/router/route_names.dart';
+import 'package:ustaxx_csm/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:ustaxx_csm/shared/presentation/widgets/navigation_menu_item.dart';
+import 'package:ustaxx_csm/shared/presentation/widgets/user_profile_card.dart';
 
 /// Main navigation sidebar for the application
 ///
@@ -72,7 +72,7 @@ class AppNavigationSidebar extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                // SFDIFY logo icon
+                // USTAXX logo icon
                 Container(
                   width: 32,
                   height: 32,
@@ -88,7 +88,7 @@ class AppNavigationSidebar extends StatelessWidget {
                 ),
                 const Gap(12),
                 Text(
-                  'SFDIFY',
+                  'USTAXX',
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,

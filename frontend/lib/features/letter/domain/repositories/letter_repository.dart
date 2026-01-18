@@ -1,6 +1,6 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:sfdify_scm/core/error/failures.dart';
-import 'package:sfdify_scm/features/letter/domain/entities/letter_entity.dart';
+import 'package:ustaxx_csm/core/error/failures.dart';
+import 'package:ustaxx_csm/features/letter/domain/entities/letter_entity.dart';
 
 abstract class LetterRepository {
   Future<Either<Failure, List<LetterEntity>>> getLetters({

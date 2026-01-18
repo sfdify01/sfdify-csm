@@ -1,6 +1,6 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:sfdify_scm/core/error/failures.dart';
-import 'package:sfdify_scm/features/consumer/domain/entities/consumer_entity.dart';
+import 'package:ustaxx_csm/core/error/failures.dart';
+import 'package:ustaxx_csm/features/consumer/domain/entities/consumer_entity.dart';
 
 abstract class ConsumerRepository {
   Future<Either<Failure, List<ConsumerEntity>>> getConsumers({

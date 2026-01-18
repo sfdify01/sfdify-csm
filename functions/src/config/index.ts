@@ -26,7 +26,7 @@ export const firebaseConfig = {
 export const kmsConfig = {
   projectId: firebaseConfig.projectId,
   location: "global",
-  keyRing: "sfdify-pii",
+  keyRing: "ustaxx-pii",
   cryptoKey: "pii-encryption-key",
   get keyName() {
     return `projects/${this.projectId}/locations/${this.location}/keyRings/${this.keyRing}/cryptoKeys/${this.cryptoKey}`;
@@ -64,8 +64,8 @@ export const lobConfig = {
  */
 export const sendgridConfig = {
   apiKey: functions.config().sendgrid?.api_key || process.env.SENDGRID_API_KEY || "",
-  fromEmail: "notifications@sfdify.com",
-  fromName: "SFDIFY Credit Services",
+  fromEmail: "notifications@ustaxx.com",
+  fromName: "USTAXX Credit Services",
 };
 
 /**

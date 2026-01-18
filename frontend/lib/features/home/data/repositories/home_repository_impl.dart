@@ -1,10 +1,10 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/core/error/exceptions.dart';
-import 'package:sfdify_scm/core/error/failures.dart';
-import 'package:sfdify_scm/features/home/data/datasources/home_remote_datasource.dart';
-import 'package:sfdify_scm/features/home/domain/entities/home_entity.dart';
-import 'package:sfdify_scm/features/home/domain/repositories/home_repository.dart';
+import 'package:ustaxx_csm/core/error/exceptions.dart';
+import 'package:ustaxx_csm/core/error/failures.dart';
+import 'package:ustaxx_csm/features/home/data/datasources/home_remote_datasource.dart';
+import 'package:ustaxx_csm/features/home/domain/entities/home_entity.dart';
+import 'package:ustaxx_csm/features/home/domain/repositories/home_repository.dart';
 
 @Injectable(as: HomeRepository)
 class HomeRepositoryImpl implements HomeRepository {

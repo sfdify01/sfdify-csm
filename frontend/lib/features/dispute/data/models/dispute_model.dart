@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:sfdify_scm/features/consumer/data/models/consumer_model.dart';
-import 'package:sfdify_scm/features/dispute/domain/entities/dispute_entity.dart';
+import 'package:ustaxx_csm/features/consumer/data/models/consumer_model.dart';
+import 'package:ustaxx_csm/features/dispute/domain/entities/dispute_entity.dart';
 
 part 'dispute_model.g.dart';
 

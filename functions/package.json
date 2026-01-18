@@ -1,7 +1,7 @@
 {
-  "name": "sfdify-functions",
+  "name": "ustaxx-functions",
   "version": "1.0.0",
-  "description": "SFDIFY Credit Dispute System - Cloud Functions",
+  "description": "USTAXX Credit Dispute System - Cloud Functions",
   "scripts": {
     "lint": "eslint --ext .js,.ts .",
     "lint:fix": "eslint --ext .js,.ts . --fix",

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:sfdify_scm/features/letter/domain/entities/letter_template_entity.dart';
+import 'package:ustaxx_csm/features/letter/domain/entities/letter_template_entity.dart';
 
 class TemplateSelector extends StatelessWidget {
   const TemplateSelector({

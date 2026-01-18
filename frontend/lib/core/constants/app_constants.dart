@@ -1,5 +1,5 @@
 abstract class AppConstants {
-  static const String appName = 'SFDIFY SCM';
+  static const String appName = 'USTAXX SCM';
   static const String appVersion = '1.0.0';
 
   // Storage keys

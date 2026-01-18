@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:sfdify_scm/core/services/firebase_auth_service.dart';
+import 'package:ustaxx_csm/core/services/firebase_auth_service.dart';
 
 /// User profile card displayed at the bottom of the navigation sidebar
 ///

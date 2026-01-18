@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:sfdify_scm/shared/domain/entities/address_entity.dart';
+import 'package:ustaxx_csm/shared/domain/entities/address_entity.dart';
 
 /// Letter entity representing a generated and mailed dispute letter
 class LetterEntity extends Equatable {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:sfdify_scm/core/theme/app_colors.dart';
+import 'package:ustaxx_csm/core/theme/app_colors.dart';
 
 class SystemStatusPanel extends StatelessWidget {
   const SystemStatusPanel({super.key});

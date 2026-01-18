@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:sfdify_scm/core/constants/api_constants.dart';
-import 'package:sfdify_scm/core/error/exceptions.dart';
+import 'package:ustaxx_csm/core/constants/api_constants.dart';
+import 'package:ustaxx_csm/core/error/exceptions.dart';
 
 class DioClient {
   DioClient({required this.dio});

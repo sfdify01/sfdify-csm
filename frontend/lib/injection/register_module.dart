@@ -8,10 +8,10 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:injectable/injectable.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sfdify_scm/core/config/firebase_config.dart';
-import 'package:sfdify_scm/core/network/api_interceptor.dart';
-import 'package:sfdify_scm/core/network/dio_client.dart';
-import 'package:sfdify_scm/core/router/app_router.dart';
+import 'package:ustaxx_csm/core/config/firebase_config.dart';
+import 'package:ustaxx_csm/core/network/api_interceptor.dart';
+import 'package:ustaxx_csm/core/network/dio_client.dart';
+import 'package:ustaxx_csm/core/router/app_router.dart';
 
 @module
 abstract class RegisterModule {

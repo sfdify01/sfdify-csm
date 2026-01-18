@@ -1,5 +1,5 @@
-import 'package:sfdify_scm/app.dart';
-import 'package:sfdify_scm/bootstrap.dart';
+import 'package:ustaxx_csm/app.dart';
+import 'package:ustaxx_csm/bootstrap.dart';
 
 Future<void> main() async {
   await bootstrap(() => const App());

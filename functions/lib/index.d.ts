@@ -1,5 +1,5 @@
 /**
- * SFDIFY Credit Dispute System - Cloud Functions Entry Point
+ * USTAXX Credit Dispute System - Cloud Functions Entry Point
  *
  * This file exports all Cloud Functions for Firebase deployment.
  * Functions are organized by domain for better maintainability.

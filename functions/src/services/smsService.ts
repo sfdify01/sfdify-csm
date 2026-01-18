@@ -38,28 +38,28 @@ export interface BulkSmsResult {
 // SMS message templates
 export const SMS_TEMPLATES = {
   SLA_REMINDER: (daysRemaining: number, bureau: string) =>
-    `SFDIFY Alert: Your ${bureau} dispute has ${daysRemaining} day(s) until SLA deadline. Login to take action.`,
+    `USTAXX Alert: Your ${bureau} dispute has ${daysRemaining} day(s) until SLA deadline. Login to take action.`,
 
   LETTER_SENT: (bureau: string) =>
-    `SFDIFY: Your dispute letter to ${bureau} has been sent! You'll receive tracking info soon.`,
+    `USTAXX: Your dispute letter to ${bureau} has been sent! You'll receive tracking info soon.`,
 
   LETTER_DELIVERED: (bureau: string) =>
-    `SFDIFY: Great news! Your dispute letter to ${bureau} was delivered successfully.`,
+    `USTAXX: Great news! Your dispute letter to ${bureau} was delivered successfully.`,
 
   LETTER_RETURNED: (bureau: string) =>
-    `SFDIFY Alert: Your letter to ${bureau} was returned. Please login to review and resend.`,
+    `USTAXX Alert: Your letter to ${bureau} was returned. Please login to review and resend.`,
 
   DISPUTE_RESOLVED: (bureau: string, outcome: string) =>
-    `SFDIFY: Your ${bureau} dispute has been resolved with outcome: ${outcome}. Login for details.`,
+    `USTAXX: Your ${bureau} dispute has been resolved with outcome: ${outcome}. Login for details.`,
 
   CREDIT_ALERT: (alertType: string) =>
-    `SFDIFY Credit Alert: ${alertType}. Login to your account for more details.`,
+    `USTAXX Credit Alert: ${alertType}. Login to your account for more details.`,
 
   VERIFICATION_CODE: (code: string) =>
-    `Your SFDIFY verification code is: ${code}. This code expires in 10 minutes.`,
+    `Your USTAXX verification code is: ${code}. This code expires in 10 minutes.`,
 
   PASSWORD_RESET: () =>
-    `SFDIFY: A password reset was requested for your account. If this wasn't you, please contact support.`,
+    `USTAXX: A password reset was requested for your account. If this wasn't you, please contact support.`,
 } as const;
 
 // ============================================================================

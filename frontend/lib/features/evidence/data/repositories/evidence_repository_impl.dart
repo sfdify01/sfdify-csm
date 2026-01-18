@@ -1,11 +1,11 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/core/error/exceptions.dart';
-import 'package:sfdify_scm/core/error/failures.dart';
-import 'package:sfdify_scm/core/network/network_info.dart';
-import 'package:sfdify_scm/features/evidence/data/datasources/evidence_remote_datasource.dart';
-import 'package:sfdify_scm/features/evidence/domain/repositories/evidence_repository.dart';
-import 'package:sfdify_scm/features/letter/domain/entities/evidence_entity.dart';
+import 'package:ustaxx_csm/core/error/exceptions.dart';
+import 'package:ustaxx_csm/core/error/failures.dart';
+import 'package:ustaxx_csm/core/network/network_info.dart';
+import 'package:ustaxx_csm/features/evidence/data/datasources/evidence_remote_datasource.dart';
+import 'package:ustaxx_csm/features/evidence/domain/repositories/evidence_repository.dart';
+import 'package:ustaxx_csm/features/letter/domain/entities/evidence_entity.dart';
 
 @Injectable(as: EvidenceRepository)
 class EvidenceRepositoryImpl implements EvidenceRepository {

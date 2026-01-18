@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sfdify_scm/features/letter/presentation/bloc/letter_generate_bloc.dart';
-import 'package:sfdify_scm/features/letter/presentation/bloc/letter_generate_event.dart';
-import 'package:sfdify_scm/features/letter/presentation/bloc/letter_generate_state.dart';
-import 'package:sfdify_scm/features/letter/presentation/widgets/mail_type_selector.dart';
-import 'package:sfdify_scm/features/letter/presentation/widgets/template_selector.dart';
-import 'package:sfdify_scm/injection/injection.dart';
+import 'package:ustaxx_csm/features/letter/presentation/bloc/letter_generate_bloc.dart';
+import 'package:ustaxx_csm/features/letter/presentation/bloc/letter_generate_event.dart';
+import 'package:ustaxx_csm/features/letter/presentation/bloc/letter_generate_state.dart';
+import 'package:ustaxx_csm/features/letter/presentation/widgets/mail_type_selector.dart';
+import 'package:ustaxx_csm/features/letter/presentation/widgets/template_selector.dart';
+import 'package:ustaxx_csm/injection/injection.dart';
 
 class LetterGeneratePage extends StatelessWidget {
   const LetterGeneratePage({

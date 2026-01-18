@@ -1,4 +1,4 @@
-# SFDIFY Credit Dispute Letter System - Architecture Design
+# USTAXX Credit Dispute Letter System - Architecture Design
 
 ## Executive Summary
 
@@ -109,13 +109,13 @@ This is a **single unified web application** (not consumer-facing) used by credi
 │  │                         CLOUD STORAGE (Files)                                  │ │
 │  │                                                                                │ │
 │  │   Buckets:                                                                     │ │
-│  │   ├── sfdify-letters/         (Generated PDFs - encrypted at rest)             │ │
+│  │   ├── ustaxx-letters/         (Generated PDFs - encrypted at rest)             │ │
 │  │   │   └── {tenantId}/{disputeId}/{letterId}.pdf                                │ │
-│  │   ├── sfdify-evidence/        (Uploaded evidence files)                        │ │
+│  │   ├── ustaxx-evidence/        (Uploaded evidence files)                        │ │
 │  │   │   └── {tenantId}/{disputeId}/{evidenceId}/{filename}                       │ │
-│  │   ├── sfdify-templates/       (Tenant letterheads & logos)                     │ │
+│  │   ├── ustaxx-templates/       (Tenant letterheads & logos)                     │ │
 │  │   │   └── {tenantId}/branding/                                                 │ │
-│  │   └── sfdify-exports/         (Audit exports, CFPB packages)                   │ │
+│  │   └── ustaxx-exports/         (Audit exports, CFPB packages)                   │ │
 │  │                                                                                │ │
 │  └────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                     │
@@ -525,21 +525,21 @@ firestore/
 
 ```json
 {
-  "id": "tenant_sfdify_001",
-  "name": "SFDIFY Credit Services",
+  "id": "tenant_ustaxx_001",
+  "name": "USTAXX Credit Services",
   "plan": "professional",
   "status": "active",
   "branding": {
-    "logoUrl": "gs://sfdify-templates/tenant_sfdify_001/branding/logo.png",
-    "letterheadUrl": "gs://sfdify-templates/tenant_sfdify_001/branding/letterhead.png",
+    "logoUrl": "gs://ustaxx-templates/tenant_ustaxx_001/branding/logo.png",
+    "letterheadUrl": "gs://ustaxx-templates/tenant_ustaxx_001/branding/letterhead.png",
     "primaryColor": "#1E40AF",
-    "companyName": "SFDIFY Credit Services LLC",
+    "companyName": "USTAXX Credit Services LLC",
     "tagline": "Empowering Your Credit Journey"
   },
   "lobConfig": {
     "senderId": "lob_sender_abc123",
     "returnAddress": {
-      "name": "SFDIFY Credit Services",
+      "name": "USTAXX Credit Services",
       "addressLine1": "123 Main Street",
       "addressLine2": "Suite 400",
       "city": "Austin",
@@ -549,9 +549,9 @@ firestore/
     "defaultMailType": "usps_first_class"
   },
   "smartCreditConfig": {
-    "clientIdSecretRef": "projects/sfdify-prod/secrets/smartcredit-client-id-tenant001",
-    "clientSecretRef": "projects/sfdify-prod/secrets/smartcredit-client-secret-tenant001",
-    "webhookEndpoint": "https://us-central1-sfdify-prod.cloudfunctions.net/webhooks-smartcredit"
+    "clientIdSecretRef": "projects/ustaxx-prod/secrets/smartcredit-client-id-tenant001",
+    "clientSecretRef": "projects/ustaxx-prod/secrets/smartcredit-client-secret-tenant001",
+    "webhookEndpoint": "https://us-central1-ustaxx-prod.cloudfunctions.net/webhooks-smartcredit"
   },
   "features": {
     "aiDraftingEnabled": true,
@@ -576,7 +576,7 @@ firestore/
 ```json
 {
   "id": "consumer_78d4f2a1",
-  "tenantId": "tenant_sfdify_001",
+  "tenantId": "tenant_ustaxx_001",
   "firstName": "enc:AES256:base64encodedciphertext==",
   "lastName": "enc:AES256:base64encodedciphertext==",
   "dob": "enc:AES256:base64encodedciphertext==",
@@ -646,10 +646,10 @@ firestore/
 {
   "id": "report_eq_20250114",
   "consumerId": "consumer_78d4f2a1",
-  "tenantId": "tenant_sfdify_001",
+  "tenantId": "tenant_ustaxx_001",
   "bureau": "equifax",
   "pulledAt": "2025-01-14T08:00:00Z",
-  "rawJsonRef": "gs://sfdify-letters/tenant_sfdify_001/consumer_78d4f2a1/reports/report_eq_20250114.json.enc",
+  "rawJsonRef": "gs://ustaxx-letters/tenant_ustaxx_001/consumer_78d4f2a1/reports/report_eq_20250114.json.enc",
   "hash": "sha256:a1b2c3d4e5f6...",
   "score": 682,
   "scoreFactors": [
@@ -695,7 +695,7 @@ firestore/
   "id": "tradeline_tl_001",
   "reportId": "report_eq_20250114",
   "consumerId": "consumer_78d4f2a1",
-  "tenantId": "tenant_sfdify_001",
+  "tenantId": "tenant_ustaxx_001",
   "bureau": "equifax",
   "creditorName": "CAPITAL ONE BANK USA NA",
   "originalCreditor": null,
@@ -747,7 +747,7 @@ firestore/
   "id": "dispute_d_20250114_001",
   "consumerId": "consumer_78d4f2a1",
   "tradelineId": "tradeline_tl_001",
-  "tenantId": "tenant_sfdify_001",
+  "tenantId": "tenant_ustaxx_001",
   "bureau": "equifax",
   "type": "611_dispute",
   "reasonCodes": [
@@ -806,13 +806,13 @@ firestore/
 {
   "id": "letter_l_001",
   "disputeId": "dispute_d_20250114_001",
-  "tenantId": "tenant_sfdify_001",
+  "tenantId": "tenant_ustaxx_001",
   "type": "611_dispute",
   "templateId": "template_611_dispute_v2",
   "renderVersion": "2025.1.3",
   "contentHtml": "<html>...(rendered HTML content)...</html>",
   "contentMarkdown": "# Dispute Letter\n\nDate: January 14, 2025...",
-  "pdfUrl": "gs://sfdify-letters/tenant_sfdify_001/dispute_d_20250114_001/letter_l_001.pdf",
+  "pdfUrl": "gs://ustaxx-letters/tenant_ustaxx_001/dispute_d_20250114_001/letter_l_001.pdf",
   "pdfHash": "sha256:f8e7d6c5b4a3...",
   "pdfSizeBytes": 245760,
   "pageCount": 3,
@@ -842,7 +842,7 @@ firestore/
     "zipCode": "77001"
   },
   "senderOnBehalf": {
-    "name": "SFDIFY Credit Services",
+    "name": "USTAXX Credit Services",
     "addressLine1": "123 Main Street",
     "addressLine2": "Suite 400",
     "city": "Austin",
@@ -929,10 +929,10 @@ firestore/
 {
   "id": "evidence_e_001",
   "disputeId": "dispute_d_20250114_001",
-  "tenantId": "tenant_sfdify_001",
+  "tenantId": "tenant_ustaxx_001",
   "filename": "bank_statement_dec2024.pdf",
   "originalFilename": "Bank Statement December 2024.pdf",
-  "fileUrl": "gs://sfdify-evidence/tenant_sfdify_001/dispute_d_20250114_001/evidence_e_001/bank_statement_dec2024.pdf",
+  "fileUrl": "gs://ustaxx-evidence/tenant_ustaxx_001/dispute_d_20250114_001/evidence_e_001/bank_statement_dec2024.pdf",
   "mimeType": "application/pdf",
   "fileSize": 524288,
   "checksum": "sha256:1a2b3c4d5e6f...",
@@ -966,9 +966,9 @@ firestore/
 ```json
 {
   "id": "audit_al_20250114_001",
-  "tenantId": "tenant_sfdify_001",
+  "tenantId": "tenant_ustaxx_001",
   "actorId": "user_operator_001",
-  "actorEmail": "operator@sfdify.com",
+  "actorEmail": "operator@ustaxx.com",
   "actorRole": "operator",
   "actorIp": "192.168.1.50",
   "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)...",
@@ -1007,7 +1007,7 @@ firestore/
 ```json
 {
   "id": "webhook_wh_001",
-  "tenantId": "tenant_sfdify_001",
+  "tenantId": "tenant_ustaxx_001",
   "provider": "lob",
   "eventType": "letter.delivered",
   "resourceType": "letter",
@@ -1047,7 +1047,7 @@ firestore/
 ```json
 {
   "id": "task_st_001",
-  "tenantId": "tenant_sfdify_001",
+  "tenantId": "tenant_ustaxx_001",
   "type": "sla_follow_up",
   "entityType": "dispute",
   "entityId": "dispute_d_20250114_001",
@@ -1145,7 +1145,7 @@ All APIs are implemented as Firebase Cloud Functions with the following characte
   "success": true,
   "data": {
     "id": "consumer_78d4f2a1",
-    "tenantId": "tenant_sfdify_001",
+    "tenantId": "tenant_ustaxx_001",
     "firstName": "John",
     "lastName": "Doe",
     "kycStatus": "pending",
@@ -1183,7 +1183,7 @@ All APIs are implemented as Firebase Cloud Functions with the following characte
 ```json
 {
   "authorizationCode": "sc_auth_xyz789",
-  "redirectUri": "https://app.sfdify.com/smartcredit/callback",
+  "redirectUri": "https://app.ustaxx.com/smartcredit/callback",
   "scopes": ["reports", "tradelines", "alerts", "scores"]
 }
 ```
@@ -1536,7 +1536,7 @@ All APIs are implemented as Firebase Cloud Functions with the following characte
       "state": "GA",
       "zipCode": "30374-0256"
     },
-    "previewUrl": "https://storage.googleapis.com/sfdify-letters/.../preview_letter_l_001.pdf?token=...",
+    "previewUrl": "https://storage.googleapis.com/ustaxx-letters/.../preview_letter_l_001.pdf?token=...",
     "createdAt": "2025-01-14T10:45:00Z"
   }
 }
@@ -1644,7 +1644,7 @@ All APIs are implemented as Firebase Cloud Functions with the following characte
     "lobId": "ltr_abc123def456",
     "trackingCode": "9400111899223456789012",
     "trackingUrl": "https://tools.usps.com/go/TrackConfirmAction?tLabels=9400111899223456789012",
-    "pdfUrl": "https://storage.googleapis.com/sfdify-letters/.../letter_l_001.pdf?token=...",
+    "pdfUrl": "https://storage.googleapis.com/ustaxx-letters/.../letter_l_001.pdf?token=...",
     "recipientAddress": {
       "name": "Equifax Information Services LLC",
       "addressLine1": "P.O. Box 740256",
@@ -1818,7 +1818,7 @@ All APIs are implemented as Firebase Cloud Functions with the following characte
 {
   "success": true,
   "data": {
-    "tenantId": "tenant_sfdify_001",
+    "tenantId": "tenant_ustaxx_001",
     "period": {
       "start": "2025-01-01",
       "end": "2025-01-31"
@@ -2901,8 +2901,8 @@ async function cleanupTestData() {
   await deleteCollection(`letters`, { tenantId: testTenantId });
 
   // Clean up Storage
-  await deleteStorageFolder(`sfdify-letters/${testTenantId}`);
-  await deleteStorageFolder(`sfdify-evidence/${testTenantId}`);
+  await deleteStorageFolder(`ustaxx-letters/${testTenantId}`);
+  await deleteStorageFolder(`ustaxx-evidence/${testTenantId}`);
 
   // Clean up audit logs (keep for compliance, just mark as test)
   await markAuditLogsAsTest(testTenantId);
@@ -2967,7 +2967,7 @@ async function cleanupTestData() {
 const { KeyManagementServiceClient } = require('@google-cloud/kms');
 
 const kmsClient = new KeyManagementServiceClient();
-const keyName = `projects/${PROJECT_ID}/locations/global/keyRings/sfdify-pii/cryptoKeys/pii-encryption-key`;
+const keyName = `projects/${PROJECT_ID}/locations/global/keyRings/ustaxx-pii/cryptoKeys/pii-encryption-key`;
 
 async function encryptPii(plaintext) {
   const [result] = await kmsClient.encrypt({
@@ -3633,4 +3633,4 @@ draft → pending_review → approved → mailed → delivered → bureau_invest
 
 *Document Version: 1.0*
 *Last Updated: January 2025*
-*Author: SFDIFY Architecture Team*
+*Author: USTAXX Architecture Team*

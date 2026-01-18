@@ -4,7 +4,7 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
 import 'package:logger/logger.dart';
-import 'package:sfdify_scm/core/services/firebase_auth_service.dart';
+import 'package:ustaxx_csm/core/services/firebase_auth_service.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';

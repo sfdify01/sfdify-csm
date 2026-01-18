@@ -7,7 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sfdify_scm/app.dart';
+import 'package:ustaxx_csm/app.dart';
 
 
 void main() {

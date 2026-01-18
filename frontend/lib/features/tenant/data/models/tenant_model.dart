@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:sfdify_scm/features/tenant/domain/entities/tenant_entity.dart';
+import 'package:ustaxx_csm/features/tenant/domain/entities/tenant_entity.dart';
 
 part 'tenant_model.g.dart';
 

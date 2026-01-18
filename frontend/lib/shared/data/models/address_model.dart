@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:sfdify_scm/shared/domain/entities/address_entity.dart';
+import 'package:ustaxx_csm/shared/domain/entities/address_entity.dart';
 
 part 'address_model.g.dart';
 

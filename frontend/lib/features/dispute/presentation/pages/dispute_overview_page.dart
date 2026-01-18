@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
-import 'package:sfdify_scm/core/theme/app_colors.dart';
-import 'package:sfdify_scm/features/dispute/domain/entities/dispute_entity.dart';
-import 'package:sfdify_scm/features/dispute/presentation/bloc/dispute_overview_bloc.dart';
-import 'package:sfdify_scm/features/dispute/presentation/bloc/dispute_overview_event.dart';
-import 'package:sfdify_scm/features/dispute/presentation/bloc/dispute_overview_state.dart';
-import 'package:sfdify_scm/features/dispute/presentation/widgets/bureau_filter_chips.dart';
-import 'package:sfdify_scm/features/dispute/presentation/widgets/dispute_list_item.dart';
-import 'package:sfdify_scm/features/dispute/presentation/widgets/dispute_metric_card.dart';
-import 'package:sfdify_scm/features/dispute/presentation/widgets/quick_actions_panel.dart';
-import 'package:sfdify_scm/features/dispute/presentation/widgets/system_status_panel.dart';
-import 'package:sfdify_scm/injection/injection.dart';
-import 'package:sfdify_scm/shared/domain/entities/dispute_metrics_entity.dart';
+import 'package:ustaxx_csm/core/theme/app_colors.dart';
+import 'package:ustaxx_csm/features/dispute/domain/entities/dispute_entity.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/bloc/dispute_overview_bloc.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/bloc/dispute_overview_event.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/bloc/dispute_overview_state.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/widgets/bureau_filter_chips.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/widgets/dispute_list_item.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/widgets/dispute_metric_card.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/widgets/quick_actions_panel.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/widgets/system_status_panel.dart';
+import 'package:ustaxx_csm/injection/injection.dart';
+import 'package:ustaxx_csm/shared/domain/entities/dispute_metrics_entity.dart';
 
 class DisputeOverviewPage extends StatelessWidget {
   const DisputeOverviewPage({super.key});

@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/features/dispute/domain/repositories/dispute_repository.dart';
-import 'package:sfdify_scm/features/letter/domain/entities/letter_template_entity.dart';
-import 'package:sfdify_scm/features/letter/domain/repositories/letter_repository.dart';
-import 'package:sfdify_scm/features/letter/presentation/bloc/letter_generate_event.dart';
-import 'package:sfdify_scm/features/letter/presentation/bloc/letter_generate_state.dart';
+import 'package:ustaxx_csm/features/dispute/domain/repositories/dispute_repository.dart';
+import 'package:ustaxx_csm/features/letter/domain/entities/letter_template_entity.dart';
+import 'package:ustaxx_csm/features/letter/domain/repositories/letter_repository.dart';
+import 'package:ustaxx_csm/features/letter/presentation/bloc/letter_generate_event.dart';
+import 'package:ustaxx_csm/features/letter/presentation/bloc/letter_generate_state.dart';
 
 @injectable
 class LetterGenerateBloc

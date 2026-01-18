@@ -1,6 +1,6 @@
 # API Credentials Setup Guide
 
-This guide walks you through obtaining API credentials for all third-party services used in SFDIFY.
+This guide walks you through obtaining API credentials for all third-party services used in USTAXX.
 
 ---
 
@@ -133,7 +133,7 @@ LOB_WEBHOOK_SECRET=whsec_<your_webhook_secret>
 3. Click "Create API Key"
 
 ### Step 4: Configure API Key
-1. **Name**: Enter a name (e.g., "SFDIFY Production")
+1. **Name**: Enter a name (e.g., "USTAXX Production")
 2. **Permissions**: Choose "Restricted Access"
 3. Enable these permissions:
    - ✅ **Mail Send** → Full Access

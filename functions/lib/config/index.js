@@ -58,7 +58,7 @@ exports.firebaseConfig = {
 exports.kmsConfig = {
     projectId: exports.firebaseConfig.projectId,
     location: "global",
-    keyRing: "sfdify-pii",
+    keyRing: "ustaxx-pii",
     cryptoKey: "pii-encryption-key",
     get keyName() {
         return `projects/${this.projectId}/locations/${this.location}/keyRings/${this.keyRing}/cryptoKeys/${this.cryptoKey}`;
@@ -93,8 +93,8 @@ exports.lobConfig = {
  */
 exports.sendgridConfig = {
     apiKey: functions.config().sendgrid?.api_key || process.env.SENDGRID_API_KEY || "",
-    fromEmail: "notifications@sfdify.com",
-    fromName: "SFDIFY Credit Services",
+    fromEmail: "notifications@ustaxx.com",
+    fromName: "USTAXX Credit Services",
 };
 /**
  * Twilio configuration for SMS notifications

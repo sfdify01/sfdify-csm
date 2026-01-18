@@ -6,9 +6,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: sfdify_scm
-      POSTGRES_USER: sfdify
-      POSTGRES_PASSWORD: sfdify_password
+      POSTGRES_DB: ustaxx_csm
+      POSTGRES_USER: ustaxx
+      POSTGRES_PASSWORD: ustaxx_password
     ports:
       - "5432:5432"
 
@@ -27,7 +27,7 @@ services:
     environment:
       - DEBUG=True
       - SECRET_KEY=dev-secret-key-change-in-production
-      - DATABASE_URL=postgres://sfdify:sfdify_password@db:5432/sfdify_scm
+      - DATABASE_URL=postgres://ustaxx:ustaxx_password@db:5432/ustaxx_csm
       - REDIS_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1
       - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
@@ -43,7 +43,7 @@ services:
     environment:
       - DEBUG=True
       - SECRET_KEY=dev-secret-key-change-in-production
-      - DATABASE_URL=postgres://sfdify:sfdify_password@db:5432/sfdify_scm
+      - DATABASE_URL=postgres://ustaxx:ustaxx_password@db:5432/ustaxx_csm
       - REDIS_URL=redis://redis:6379/0
     depends_on:
       - db

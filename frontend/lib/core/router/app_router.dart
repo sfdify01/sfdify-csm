@@ -2,23 +2,23 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sfdify_scm/core/router/route_names.dart';
-import 'package:sfdify_scm/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:sfdify_scm/features/auth/presentation/pages/forgot_password_page.dart';
-import 'package:sfdify_scm/features/auth/presentation/pages/login_page.dart';
-import 'package:sfdify_scm/features/auth/presentation/pages/register_page.dart';
-import 'package:sfdify_scm/features/consumer/presentation/pages/consumer_detail_page.dart';
-import 'package:sfdify_scm/features/consumer/presentation/pages/consumer_form_page.dart';
-import 'package:sfdify_scm/features/consumer/presentation/pages/consumer_list_page.dart';
-import 'package:sfdify_scm/features/dispute/presentation/pages/dispute_create_page.dart';
-import 'package:sfdify_scm/features/dispute/presentation/pages/dispute_detail_page.dart';
-import 'package:sfdify_scm/features/dispute/presentation/pages/dispute_overview_page.dart';
-import 'package:sfdify_scm/features/home/presentation/pages/home_page.dart';
-import 'package:sfdify_scm/features/letter/presentation/pages/letter_detail_page.dart';
-import 'package:sfdify_scm/features/letter/presentation/pages/letter_generate_page.dart';
-import 'package:sfdify_scm/features/letter/presentation/pages/letter_list_page.dart';
-import 'package:sfdify_scm/injection/injection.dart';
-import 'package:sfdify_scm/shared/presentation/layout/main_layout.dart';
+import 'package:ustaxx_csm/core/router/route_names.dart';
+import 'package:ustaxx_csm/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:ustaxx_csm/features/auth/presentation/pages/forgot_password_page.dart';
+import 'package:ustaxx_csm/features/auth/presentation/pages/login_page.dart';
+import 'package:ustaxx_csm/features/auth/presentation/pages/register_page.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/pages/consumer_detail_page.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/pages/consumer_form_page.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/pages/consumer_list_page.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/pages/dispute_create_page.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/pages/dispute_detail_page.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/pages/dispute_overview_page.dart';
+import 'package:ustaxx_csm/features/home/presentation/pages/home_page.dart';
+import 'package:ustaxx_csm/features/letter/presentation/pages/letter_detail_page.dart';
+import 'package:ustaxx_csm/features/letter/presentation/pages/letter_generate_page.dart';
+import 'package:ustaxx_csm/features/letter/presentation/pages/letter_list_page.dart';
+import 'package:ustaxx_csm/injection/injection.dart';
+import 'package:ustaxx_csm/shared/presentation/layout/main_layout.dart';
 
 /// Listenable that triggers router refresh when stream emits
 class GoRouterRefreshStream extends ChangeNotifier {

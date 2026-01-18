@@ -128,7 +128,7 @@ async function sendNotification(tenantId, type, data) {
                         bureau: data.bureau || "Bureau",
                         daysRemaining: data.daysUntilDue,
                         dueDate: data.dueAt,
-                        disputeUrl: `https://app.sfdify.com/disputes/${data.disputeId}`,
+                        disputeUrl: `https://app.ustaxx.com/disputes/${data.disputeId}`,
                     });
                     deliveryResults.push({
                         channel: "email",
@@ -333,7 +333,7 @@ exports.scheduledSlaChecker = functions.pubsub
                         tenantId: dispute.tenantId,
                         actor: {
                             userId: "system",
-                            email: "scheduler@sfdify.com",
+                            email: "scheduler@ustaxx.com",
                             role: "owner",
                         },
                         entity: "dispute",

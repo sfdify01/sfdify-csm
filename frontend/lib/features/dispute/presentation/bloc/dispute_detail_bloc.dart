@@ -1,10 +1,10 @@
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/features/dispute/domain/repositories/dispute_repository.dart';
-import 'package:sfdify_scm/features/dispute/domain/usecases/get_dispute.dart';
-import 'package:sfdify_scm/features/dispute/presentation/bloc/dispute_detail_event.dart';
-import 'package:sfdify_scm/features/dispute/presentation/bloc/dispute_detail_state.dart';
+import 'package:ustaxx_csm/features/dispute/domain/repositories/dispute_repository.dart';
+import 'package:ustaxx_csm/features/dispute/domain/usecases/get_dispute.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/bloc/dispute_detail_event.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/bloc/dispute_detail_state.dart';
 
 @injectable
 class DisputeDetailBloc extends Bloc<DisputeDetailEvent, DisputeDetailState> {

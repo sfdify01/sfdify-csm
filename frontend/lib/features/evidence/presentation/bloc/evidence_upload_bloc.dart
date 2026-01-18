@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/features/evidence/domain/repositories/evidence_repository.dart';
-import 'package:sfdify_scm/features/evidence/presentation/bloc/evidence_upload_event.dart';
-import 'package:sfdify_scm/features/evidence/presentation/bloc/evidence_upload_state.dart';
+import 'package:ustaxx_csm/features/evidence/domain/repositories/evidence_repository.dart';
+import 'package:ustaxx_csm/features/evidence/presentation/bloc/evidence_upload_event.dart';
+import 'package:ustaxx_csm/features/evidence/presentation/bloc/evidence_upload_state.dart';
 
 @injectable
 class EvidenceUploadBloc

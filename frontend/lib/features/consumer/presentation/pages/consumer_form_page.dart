@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sfdify_scm/features/consumer/presentation/bloc/consumer_form_bloc.dart';
-import 'package:sfdify_scm/features/consumer/presentation/bloc/consumer_form_event.dart';
-import 'package:sfdify_scm/features/consumer/presentation/bloc/consumer_form_state.dart';
-import 'package:sfdify_scm/features/consumer/presentation/widgets/address_form_field.dart';
-import 'package:sfdify_scm/features/consumer/presentation/widgets/phone_form_field.dart';
-import 'package:sfdify_scm/injection/injection.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_form_bloc.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_form_event.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_form_state.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/widgets/address_form_field.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/widgets/phone_form_field.dart';
+import 'package:ustaxx_csm/injection/injection.dart';
 
 class ConsumerFormPage extends StatelessWidget {
   const ConsumerFormPage({
@@ -328,7 +328,7 @@ class _ConsumerFormViewState extends State<ConsumerFormView> {
                           const Gap(4),
                           Text(
                             'I acknowledge that the consumer has provided written consent '
-                            'authorizing SFDIFY to pull their credit report, submit disputes '
+                            'authorizing USTAXX to pull their credit report, submit disputes '
                             'on their behalf, and communicate with credit bureaus regarding '
                             'their credit file under the Fair Credit Reporting Act (FCRA).',
                             style: theme.textTheme.bodySmall?.copyWith(

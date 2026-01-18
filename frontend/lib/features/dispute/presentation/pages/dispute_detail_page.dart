@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sfdify_scm/features/dispute/presentation/bloc/dispute_detail_bloc.dart';
-import 'package:sfdify_scm/features/dispute/presentation/bloc/dispute_detail_event.dart';
-import 'package:sfdify_scm/features/dispute/presentation/bloc/dispute_detail_state.dart';
-import 'package:sfdify_scm/features/dispute/presentation/widgets/dispute_actions_panel.dart';
-import 'package:sfdify_scm/features/dispute/presentation/widgets/dispute_header_card.dart';
-import 'package:sfdify_scm/features/dispute/presentation/widgets/dispute_timeline.dart';
-import 'package:sfdify_scm/injection/injection.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/bloc/dispute_detail_bloc.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/bloc/dispute_detail_event.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/bloc/dispute_detail_state.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/widgets/dispute_actions_panel.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/widgets/dispute_header_card.dart';
+import 'package:ustaxx_csm/features/dispute/presentation/widgets/dispute_timeline.dart';
+import 'package:ustaxx_csm/injection/injection.dart';
 
 class DisputeDetailPage extends StatelessWidget {
   const DisputeDetailPage({

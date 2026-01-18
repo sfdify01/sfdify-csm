@@ -1,4 +1,4 @@
-# SFDIFY Cloud Functions Deployment Checklist
+# USTAXX Cloud Functions Deployment Checklist
 
 ## ✅ Pre-Deployment Setup
 
@@ -31,7 +31,7 @@ cd functions
 ```
 
 This will:
-- Create a Cloud KMS key ring named `sfdify-pii`
+- Create a Cloud KMS key ring named `ustaxx-pii`
 - Create a crypto key for PII encryption
 - Set up proper IAM permissions
 - Configure automatic key rotation (90 days)

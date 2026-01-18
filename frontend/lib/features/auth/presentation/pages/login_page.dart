@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sfdify_scm/core/router/route_names.dart';
-import 'package:sfdify_scm/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:sfdify_scm/injection/injection.dart';
+import 'package:ustaxx_csm/core/router/route_names.dart';
+import 'package:ustaxx_csm/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:ustaxx_csm/injection/injection.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -70,7 +70,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'SFDIFY',
+                        'USTAXX',
                         style: theme.textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.primary,

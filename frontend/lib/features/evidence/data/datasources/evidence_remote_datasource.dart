@@ -1,6 +1,6 @@
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/core/services/cloud_functions_service.dart';
-import 'package:sfdify_scm/features/evidence/data/models/evidence_model.dart';
+import 'package:ustaxx_csm/core/services/cloud_functions_service.dart';
+import 'package:ustaxx_csm/features/evidence/data/models/evidence_model.dart';
 
 abstract class EvidenceRemoteDataSource {
   Future<List<EvidenceModel>> getEvidenceList({

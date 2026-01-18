@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:sfdify_scm/shared/domain/entities/dispute_metrics_entity.dart';
+import 'package:ustaxx_csm/shared/domain/entities/dispute_metrics_entity.dart';
 
 part 'dispute_metrics_model.g.dart';
 

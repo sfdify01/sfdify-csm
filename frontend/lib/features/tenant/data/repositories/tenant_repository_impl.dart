@@ -1,11 +1,11 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/core/error/exceptions.dart';
-import 'package:sfdify_scm/core/error/failures.dart';
-import 'package:sfdify_scm/core/network/network_info.dart';
-import 'package:sfdify_scm/features/tenant/data/datasources/tenant_remote_datasource.dart';
-import 'package:sfdify_scm/features/tenant/domain/entities/tenant_entity.dart';
-import 'package:sfdify_scm/features/tenant/domain/repositories/tenant_repository.dart';
+import 'package:ustaxx_csm/core/error/exceptions.dart';
+import 'package:ustaxx_csm/core/error/failures.dart';
+import 'package:ustaxx_csm/core/network/network_info.dart';
+import 'package:ustaxx_csm/features/tenant/data/datasources/tenant_remote_datasource.dart';
+import 'package:ustaxx_csm/features/tenant/domain/entities/tenant_entity.dart';
+import 'package:ustaxx_csm/features/tenant/domain/repositories/tenant_repository.dart';
 
 @Injectable(as: TenantRepository)
 class TenantRepositoryImpl implements TenantRepository {

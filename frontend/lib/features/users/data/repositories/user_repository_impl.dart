@@ -1,11 +1,11 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/core/error/exceptions.dart';
-import 'package:sfdify_scm/core/error/failures.dart';
-import 'package:sfdify_scm/core/network/network_info.dart';
-import 'package:sfdify_scm/features/users/data/datasources/user_remote_datasource.dart';
-import 'package:sfdify_scm/features/users/domain/entities/user_entity.dart';
-import 'package:sfdify_scm/features/users/domain/repositories/user_repository.dart';
+import 'package:ustaxx_csm/core/error/exceptions.dart';
+import 'package:ustaxx_csm/core/error/failures.dart';
+import 'package:ustaxx_csm/core/network/network_info.dart';
+import 'package:ustaxx_csm/features/users/data/datasources/user_remote_datasource.dart';
+import 'package:ustaxx_csm/features/users/domain/entities/user_entity.dart';
+import 'package:ustaxx_csm/features/users/domain/repositories/user_repository.dart';
 
 @Injectable(as: UserRepository)
 class UserRepositoryImpl implements UserRepository {

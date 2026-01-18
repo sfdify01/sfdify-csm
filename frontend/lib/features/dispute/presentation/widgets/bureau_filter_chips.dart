@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sfdify_scm/core/constants/dispute_constants.dart';
+import 'package:ustaxx_csm/core/constants/dispute_constants.dart';
 
 class BureauFilterChips extends StatelessWidget {
   const BureauFilterChips({

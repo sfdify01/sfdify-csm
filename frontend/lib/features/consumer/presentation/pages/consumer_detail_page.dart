@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sfdify_scm/features/consumer/presentation/bloc/consumer_detail_bloc.dart';
-import 'package:sfdify_scm/features/consumer/presentation/bloc/consumer_detail_event.dart';
-import 'package:sfdify_scm/features/consumer/presentation/bloc/consumer_detail_state.dart';
-import 'package:sfdify_scm/features/consumer/presentation/widgets/consumer_credit_summary.dart';
-import 'package:sfdify_scm/features/consumer/presentation/widgets/consumer_disputes_tab.dart';
-import 'package:sfdify_scm/features/consumer/presentation/widgets/consumer_info_card.dart';
-import 'package:sfdify_scm/injection/injection.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_detail_bloc.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_detail_event.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_detail_state.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/widgets/consumer_credit_summary.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/widgets/consumer_disputes_tab.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/widgets/consumer_info_card.dart';
+import 'package:ustaxx_csm/injection/injection.dart';
 
 class ConsumerDetailPage extends StatelessWidget {
   const ConsumerDetailPage({

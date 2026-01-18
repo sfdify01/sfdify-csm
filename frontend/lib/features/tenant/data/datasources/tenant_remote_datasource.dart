@@ -1,6 +1,6 @@
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/core/services/cloud_functions_service.dart';
-import 'package:sfdify_scm/features/tenant/data/models/tenant_model.dart';
+import 'package:ustaxx_csm/core/services/cloud_functions_service.dart';
+import 'package:ustaxx_csm/features/tenant/data/models/tenant_model.dart';
 
 abstract class TenantRemoteDataSource {
   /// Gets the current tenant (from auth token's tenantId)

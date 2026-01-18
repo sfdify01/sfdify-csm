@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
-import 'package:sfdify_scm/features/dispute/domain/entities/dispute_entity.dart';
-import 'package:sfdify_scm/features/letter/domain/entities/letter_entity.dart';
-import 'package:sfdify_scm/features/letter/domain/entities/letter_template_entity.dart';
+import 'package:ustaxx_csm/features/dispute/domain/entities/dispute_entity.dart';
+import 'package:ustaxx_csm/features/letter/domain/entities/letter_entity.dart';
+import 'package:ustaxx_csm/features/letter/domain/entities/letter_template_entity.dart';
 
 enum LetterGenerateStatus { initial, loading, ready, submitting, success, failure }
 

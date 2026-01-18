@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
-import 'package:sfdify_scm/features/evidence/presentation/widgets/evidence_preview_card.dart';
-import 'package:sfdify_scm/features/letter/domain/entities/evidence_entity.dart';
+import 'package:ustaxx_csm/features/evidence/presentation/widgets/evidence_preview_card.dart';
+import 'package:ustaxx_csm/features/letter/domain/entities/evidence_entity.dart';
 
 class EvidenceListWidget extends StatefulWidget {
   const EvidenceListWidget({

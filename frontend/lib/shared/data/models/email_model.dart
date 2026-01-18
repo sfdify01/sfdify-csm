@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:sfdify_scm/shared/domain/entities/email_entity.dart';
+import 'package:ustaxx_csm/shared/domain/entities/email_entity.dart';
 
 part 'email_model.g.dart';
 

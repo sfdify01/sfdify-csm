@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:sfdify_scm/features/consumer/domain/entities/consumer_entity.dart';
+import 'package:ustaxx_csm/features/consumer/domain/entities/consumer_entity.dart';
 
 part 'consumer_model.g.dart';
 

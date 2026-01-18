@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sfdify_scm/core/constants/app_constants.dart';
-import 'package:sfdify_scm/core/router/route_names.dart';
-import 'package:sfdify_scm/features/home/presentation/bloc/home_bloc.dart';
-import 'package:sfdify_scm/features/home/presentation/widgets/home_card.dart';
-import 'package:sfdify_scm/injection/injection.dart';
-import 'package:sfdify_scm/shared/presentation/bloc/theme/theme_bloc.dart';
+import 'package:ustaxx_csm/core/constants/app_constants.dart';
+import 'package:ustaxx_csm/core/router/route_names.dart';
+import 'package:ustaxx_csm/features/home/presentation/bloc/home_bloc.dart';
+import 'package:ustaxx_csm/features/home/presentation/widgets/home_card.dart';
+import 'package:ustaxx_csm/injection/injection.dart';
+import 'package:ustaxx_csm/shared/presentation/bloc/theme/theme_bloc.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});

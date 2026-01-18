@@ -1,9 +1,9 @@
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:injectable/injectable.dart';
-import 'package:sfdify_scm/features/consumer/domain/usecases/get_consumers.dart';
-import 'package:sfdify_scm/features/consumer/presentation/bloc/consumer_list_event.dart';
-import 'package:sfdify_scm/features/consumer/presentation/bloc/consumer_list_state.dart';
+import 'package:ustaxx_csm/features/consumer/domain/usecases/get_consumers.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_list_event.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_list_state.dart';
 import 'package:stream_transform/stream_transform.dart';
 
 const _debounceDuration = Duration(milliseconds: 300);
