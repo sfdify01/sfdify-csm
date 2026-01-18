@@ -116,6 +116,7 @@ extension GetItInjectableX on _i174.GetIt {
     gh.singleton<_i141.FirebaseCrashlytics>(() => registerModule.crashlytics);
     gh.singleton<_i627.FirebaseRemoteConfig>(() => registerModule.remoteConfig);
     gh.singleton<_i354.ThemeBloc>(() => _i354.ThemeBloc());
+    gh.factory<_i6.NetworkInfo>(() => _i6.NetworkInfoImpl());
     gh.singleton<_i423.AnalyticsService>(
       () => _i423.AnalyticsService(
         gh<_i398.FirebaseAnalytics>(),
@@ -128,7 +129,6 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i974.Logger>(),
       ),
     );
-    gh.factory<_i6.NetworkInfo>(() => _i6.NetworkInfoImpl());
     gh.singleton<_i361.Dio>(() => registerModule.dio(gh<_i974.Logger>()));
     gh.singleton<_i816.CloudFunctionsService>(
       () => _i816.CloudFunctionsService(gh<_i809.FirebaseFunctions>()),
@@ -139,50 +139,20 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i974.Logger>(),
       ),
     );
-    gh.factory<_i717.DisputeRemoteDataSource>(
-      () =>
-          _i717.DisputeRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
-    );
-    gh.singleton<_i781.FirebaseAuthService>(
-      () => _i781.FirebaseAuthService(
-        gh<_i59.FirebaseAuth>(),
-        gh<_i816.CloudFunctionsService>(),
-        gh<_i974.Logger>(),
-      ),
-    );
-    gh.factory<_i466.UserRemoteDataSource>(
-      () => _i466.UserRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
-    );
-    gh.factory<_i75.HomeRemoteDataSource>(
-      () => _i75.HomeRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
-    );
-    gh.singleton<_i393.DioClient>(
-      () => registerModule.dioClient(gh<_i361.Dio>()),
-    );
-    gh.factory<_i869.LetterRemoteDataSource>(
-      () => _i869.LetterRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
-    );
-    gh.factory<_i718.TenantRemoteDataSource>(
-      () => _i718.TenantRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
-    );
     gh.factory<_i1023.EvidenceRemoteDataSource>(
       () => _i1023.EvidenceRemoteDataSourceImpl(
         gh<_i816.CloudFunctionsService>(),
       ),
     );
-    gh.factory<_i391.ConsumerRemoteDataSource>(
-      () =>
-          _i391.ConsumerRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
+    gh.factory<_i466.UserRemoteDataSource>(
+      () => _i466.UserRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
     );
-    gh.singleton<_i59.AuthBloc>(
-      () => _i59.AuthBloc(gh<_i781.FirebaseAuthService>(), gh<_i974.Logger>()),
+    gh.factory<_i869.LetterRemoteDataSource>(
+      () => _i869.LetterRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
     );
-    gh.factory<_i66.HomeRepository>(
-      () => _i6.HomeRepositoryImpl(gh<_i75.HomeRemoteDataSource>()),
-    );
-    gh.factory<_i597.TenantRepository>(
-      () => _i878.TenantRepositoryImpl(
-        gh<_i718.TenantRemoteDataSource>(),
+    gh.factory<_i211.EvidenceRepository>(
+      () => _i282.EvidenceRepositoryImpl(
+        gh<_i1023.EvidenceRemoteDataSource>(),
         gh<_i6.NetworkInfo>(),
       ),
     );
@@ -192,29 +162,44 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i6.NetworkInfo>(),
       ),
     );
-    gh.factory<_i328.DisputeRepository>(
-      () => _i1061.DisputeRepositoryImpl(
-        gh<_i717.DisputeRemoteDataSource>(),
+    gh.factory<_i718.TenantRemoteDataSource>(
+      () => _i718.TenantRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
+    );
+    gh.factory<_i597.TenantRepository>(
+      () => _i878.TenantRepositoryImpl(
+        gh<_i718.TenantRemoteDataSource>(),
         gh<_i6.NetworkInfo>(),
       ),
     );
-    gh.factory<_i500.GetDispute>(
-      () => _i500.GetDispute(gh<_i328.DisputeRepository>()),
+    gh.singleton<_i393.DioClient>(
+      () => registerModule.dioClient(gh<_i361.Dio>()),
     );
-    gh.factory<_i620.GetDisputeMetrics>(
-      () => _i620.GetDisputeMetrics(gh<_i328.DisputeRepository>()),
+    gh.factory<_i75.HomeRemoteDataSource>(
+      () => _i75.HomeRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
     );
-    gh.factory<_i627.GetDisputes>(
-      () => _i627.GetDisputes(gh<_i328.DisputeRepository>()),
+    gh.factory<_i434.EvidenceUploadBloc>(
+      () => _i434.EvidenceUploadBloc(gh<_i211.EvidenceRepository>()),
     );
-    gh.factory<_i489.GetHomeData>(
-      () => _i489.GetHomeData(gh<_i66.HomeRepository>()),
+    gh.factory<_i717.DisputeRemoteDataSource>(
+      () =>
+          _i717.DisputeRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
     );
-    gh.factory<_i236.ConsumerRepository>(
-      () => _i677.ConsumerRepositoryImpl(
-        gh<_i391.ConsumerRemoteDataSource>(),
-        gh<_i6.NetworkInfo>(),
+    gh.factory<_i391.ConsumerRemoteDataSource>(
+      () =>
+          _i391.ConsumerRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
+    );
+    gh.singleton<_i781.FirebaseAuthService>(
+      () => _i781.FirebaseAuthService(
+        gh<_i59.FirebaseAuth>(),
+        gh<_i816.CloudFunctionsService>(),
+        gh<_i974.Logger>(),
       ),
+    );
+    gh.singleton<_i59.AuthBloc>(
+      () => _i59.AuthBloc(gh<_i781.FirebaseAuthService>(), gh<_i974.Logger>()),
+    );
+    gh.factory<_i66.HomeRepository>(
+      () => _i6.HomeRepositoryImpl(gh<_i75.HomeRemoteDataSource>()),
     );
     gh.factory<_i887.LetterRepository>(
       () => _i639.LetterRepositoryImpl(
@@ -222,16 +207,16 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i6.NetworkInfo>(),
       ),
     );
-    gh.factory<_i211.EvidenceRepository>(
-      () => _i282.EvidenceRepositoryImpl(
-        gh<_i1023.EvidenceRemoteDataSource>(),
+    gh.factory<_i236.ConsumerRepository>(
+      () => _i677.ConsumerRepositoryImpl(
+        gh<_i391.ConsumerRemoteDataSource>(),
         gh<_i6.NetworkInfo>(),
       ),
     );
-    gh.factory<_i66.DisputeDetailBloc>(
-      () => _i66.DisputeDetailBloc(
-        gh<_i500.GetDispute>(),
-        gh<_i328.DisputeRepository>(),
+    gh.factory<_i328.DisputeRepository>(
+      () => _i1061.DisputeRepositoryImpl(
+        gh<_i717.DisputeRemoteDataSource>(),
+        gh<_i6.NetworkInfo>(),
       ),
     );
     gh.factory<_i702.GetConsumer>(
@@ -243,21 +228,26 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i487.ConsumerFormBloc>(
       () => _i487.ConsumerFormBloc(gh<_i236.ConsumerRepository>()),
     );
-    gh.factory<_i824.HomeBloc>(() => _i824.HomeBloc(gh<_i489.GetHomeData>()));
+    gh.factory<_i500.GetDispute>(
+      () => _i500.GetDispute(gh<_i328.DisputeRepository>()),
+    );
+    gh.factory<_i620.GetDisputeMetrics>(
+      () => _i620.GetDisputeMetrics(gh<_i328.DisputeRepository>()),
+    );
+    gh.factory<_i627.GetDisputes>(
+      () => _i627.GetDisputes(gh<_i328.DisputeRepository>()),
+    );
+    gh.factory<_i219.ConsumerListBloc>(
+      () => _i219.ConsumerListBloc(gh<_i130.GetConsumers>()),
+    );
     gh.factory<_i879.LetterDetailBloc>(
       () => _i879.LetterDetailBloc(gh<_i887.LetterRepository>()),
     );
     gh.factory<_i474.LetterListBloc>(
       () => _i474.LetterListBloc(gh<_i887.LetterRepository>()),
     );
-    gh.factory<_i219.ConsumerListBloc>(
-      () => _i219.ConsumerListBloc(gh<_i130.GetConsumers>()),
-    );
-    gh.factory<_i689.DisputeOverviewBloc>(
-      () => _i689.DisputeOverviewBloc(
-        gh<_i620.GetDisputeMetrics>(),
-        gh<_i627.GetDisputes>(),
-      ),
+    gh.factory<_i489.GetHomeData>(
+      () => _i489.GetHomeData(gh<_i66.HomeRepository>()),
     );
     gh.factory<_i53.LetterGenerateBloc>(
       () => _i53.LetterGenerateBloc(
@@ -265,17 +255,27 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i328.DisputeRepository>(),
       ),
     );
-    gh.factory<_i669.ConsumerDetailBloc>(
-      () => _i669.ConsumerDetailBloc(gh<_i702.GetConsumer>()),
-    );
-    gh.factory<_i434.EvidenceUploadBloc>(
-      () => _i434.EvidenceUploadBloc(gh<_i211.EvidenceRepository>()),
+    gh.factory<_i689.DisputeOverviewBloc>(
+      () => _i689.DisputeOverviewBloc(
+        gh<_i620.GetDisputeMetrics>(),
+        gh<_i627.GetDisputes>(),
+      ),
     );
     gh.factory<_i793.DisputeCreateBloc>(
       () => _i793.DisputeCreateBloc(
         gh<_i130.GetConsumers>(),
         gh<_i328.DisputeRepository>(),
       ),
+    );
+    gh.factory<_i824.HomeBloc>(() => _i824.HomeBloc(gh<_i489.GetHomeData>()));
+    gh.factory<_i66.DisputeDetailBloc>(
+      () => _i66.DisputeDetailBloc(
+        gh<_i500.GetDispute>(),
+        gh<_i328.DisputeRepository>(),
+      ),
+    );
+    gh.factory<_i669.ConsumerDetailBloc>(
+      () => _i669.ConsumerDetailBloc(gh<_i702.GetConsumer>()),
     );
     return this;
   }

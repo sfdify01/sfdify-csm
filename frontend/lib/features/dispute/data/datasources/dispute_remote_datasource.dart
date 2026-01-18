@@ -32,7 +32,22 @@ class DisputeRemoteDataSourceImpl implements DisputeRemoteDataSource {
     );
 
     if (!response.success || response.data == null) {
-      throw Exception(response.error?.message ?? 'Failed to fetch dispute metrics');
+      // Provide user-friendly error messages for common Firebase errors
+      final errorCode = response.error?.code ?? '';
+      final errorMessage = response.error?.message ?? 'Failed to fetch dispute metrics';
+
+      String userMessage;
+      if (errorCode == 'internal' || errorMessage == 'internal') {
+        userMessage = 'Unable to load analytics. The server encountered an error. Please try again later.';
+      } else if (errorCode == 'permission-denied' || errorCode == 'unauthenticated') {
+        userMessage = 'You do not have permission to view analytics.';
+      } else if (errorCode == 'deadline-exceeded') {
+        userMessage = 'Request timed out. Please try again.';
+      } else {
+        userMessage = errorMessage;
+      }
+
+      throw Exception(userMessage);
     }
 
     return response.data!;

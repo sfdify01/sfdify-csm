@@ -132,13 +132,6 @@
       ]
     },
     {
-      "collectionGroup": "letters",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "lobId", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "evidence",
       "queryScope": "COLLECTION",
       "fields": [
@@ -276,6 +269,22 @@
       "fields": [
         { "fieldPath": "tenantId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "disputes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId", "order": "ASCENDING" },
+        { "fieldPath": "timestamps.createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "disputes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId", "order": "ASCENDING" },
+        { "fieldPath": "timestamps.resolvedAt", "order": "ASCENDING" }
       ]
     }
   ],

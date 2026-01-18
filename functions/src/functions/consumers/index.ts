@@ -41,6 +41,10 @@ import { firebaseConfig } from "../../config";
 import {
   Consumer,
   ConsumerConsent,
+  ConsumerDocument,
+  ConsumerDocumentType,
+  ConsumerStatus,
+  SmartCreditSourceType,
   Address,
   Phone,
   Email,
@@ -285,6 +289,10 @@ async function createConsumerHandler(
     emails,
     kycStatus: "pending",
     consent,
+    // New Disputebee-style fields
+    status: "unsent" as ConsumerStatus,
+    isActive: true,
+    documents: [],
     createdAt: FieldValue.serverTimestamp() as unknown as Timestamp,
     updatedAt: FieldValue.serverTimestamp() as unknown as Timestamp,
     createdBy: actorId,

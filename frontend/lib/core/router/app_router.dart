@@ -16,6 +16,7 @@ import 'package:ustaxx_csm/features/dispute/presentation/pages/dispute_overview_
 import 'package:ustaxx_csm/features/home/presentation/pages/home_page.dart';
 import 'package:ustaxx_csm/features/letter/presentation/pages/letter_detail_page.dart';
 import 'package:ustaxx_csm/features/letter/presentation/pages/letter_generate_page.dart';
+import 'package:ustaxx_csm/features/letter/presentation/pages/letter_library_page.dart';
 import 'package:ustaxx_csm/features/letter/presentation/pages/letter_list_page.dart';
 import 'package:ustaxx_csm/injection/injection.dart';
 import 'package:ustaxx_csm/shared/presentation/layout/main_layout.dart';
@@ -193,6 +194,13 @@ class AppRouter {
                   child: LetterGeneratePage(disputeId: disputeId),
                 );
               },
+            ),
+            GoRoute(
+              path: RoutePaths.letterLibrary,
+              name: RouteNames.letterLibrary,
+              pageBuilder: (context, state) => const NoTransitionPage(
+                child: LetterLibraryPage(),
+              ),
             ),
           ],
         ),

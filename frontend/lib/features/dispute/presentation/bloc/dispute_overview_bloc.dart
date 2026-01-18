@@ -51,28 +51,42 @@ class DisputeOverviewBloc
     final metricsResult = results[0] as Either<Failure, DisputeMetricsEntity>;
     final disputesResult = results[1] as Either<Failure, List<DisputeEntity>>;
 
-    // Handle results using fold
-    metricsResult.fold(
+    // Handle disputes result - this is required for the page to work
+    disputesResult.fold(
       (failure) {
         emit(state.copyWith(
           status: DisputeOverviewStatus.failure,
           errorMessage: failure.message,
         ));
       },
-      (metrics) {
-        disputesResult.fold(
+      (disputes) {
+        // Disputes loaded successfully, now handle metrics
+        // If metrics fail, use default values and show a warning
+        metricsResult.fold(
           (failure) {
+            // Use default metrics but still show the page
             emit(state.copyWith(
-              status: DisputeOverviewStatus.failure,
-              errorMessage: failure.message,
+              status: DisputeOverviewStatus.success,
+              metrics: const DisputeMetricsEntity(
+                totalDisputes: 0,
+                percentageChange: 0,
+                pendingApproval: 0,
+                inTransitViaLob: 0,
+                slaBreaches: 0,
+                slaBreachesToday: 0,
+              ),
+              disputes: disputes,
+              hasMore: disputes.length >= 20,
+              errorMessage: 'Analytics temporarily unavailable',
             ));
           },
-          (disputes) {
+          (metrics) {
             emit(state.copyWith(
               status: DisputeOverviewStatus.success,
               metrics: metrics,
               disputes: disputes,
               hasMore: disputes.length >= 20,
+              errorMessage: null,
             ));
           },
         );
@@ -96,22 +110,30 @@ class DisputeOverviewBloc
     final metricsResult = results[0] as Either<Failure, DisputeMetricsEntity>;
     final disputesResult = results[1] as Either<Failure, List<DisputeEntity>>;
 
-    // Handle results using fold
-    metricsResult.fold(
+    // Handle disputes result - this is required for the page to work
+    disputesResult.fold(
       (failure) {
         emit(state.copyWith(errorMessage: failure.message));
       },
-      (metrics) {
-        disputesResult.fold(
+      (disputes) {
+        // Disputes loaded successfully, now handle metrics
+        metricsResult.fold(
           (failure) {
-            emit(state.copyWith(errorMessage: failure.message));
+            // Keep previous metrics if available, or use defaults
+            emit(state.copyWith(
+              status: DisputeOverviewStatus.success,
+              disputes: disputes,
+              hasMore: disputes.length >= 20,
+              errorMessage: 'Analytics temporarily unavailable',
+            ));
           },
-          (disputes) {
+          (metrics) {
             emit(state.copyWith(
               status: DisputeOverviewStatus.success,
               metrics: metrics,
               disputes: disputes,
               hasMore: disputes.length >= 20,
+              errorMessage: null,
             ));
           },
         );

@@ -21,6 +21,7 @@ abstract class RouteNames {
   static const String letterList = 'letter_list';
   static const String letterDetail = 'letter_detail';
   static const String letterGenerate = 'letter_generate';
+  static const String letterLibrary = 'letter_library';
 }
 
 abstract class RoutePaths {
@@ -46,4 +47,5 @@ abstract class RoutePaths {
   static const String letterList = '/letters';
   static const String letterDetail = '/letters/:id';
   static const String letterGenerate = '/disputes/:disputeId/letters/new';
+  static const String letterLibrary = '/templates';
 }

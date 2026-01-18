@@ -50,6 +50,15 @@ LetterModel _$LetterModelFromJson(Map<String, dynamic> json) => LetterModel(
       : DateTime.parse(json['returnedAt'] as String),
   cost: (json['cost'] as num?)?.toDouble(),
   updatedAt: DateTime.parse(json['updatedAt'] as String),
+  round: (json['round'] as num?)?.toInt() ?? 1,
+  recipientType: json['recipientType'] == null
+      ? LetterRecipientType.bureau
+      : _recipientTypeFromJson(json['recipientType'] as String?),
+  recipientName: json['recipientName'] as String?,
+  responseReceivedAt: json['responseReceivedAt'] == null
+      ? null
+      : DateTime.parse(json['responseReceivedAt'] as String),
+  responseNotes: json['responseNotes'] as String?,
 );
 
 Map<String, dynamic> _$LetterModelToJson(LetterModel instance) =>
@@ -79,8 +88,13 @@ Map<String, dynamic> _$LetterModelToJson(LetterModel instance) =>
       'returnedAt': instance.returnedAt?.toIso8601String(),
       'cost': instance.cost,
       'updatedAt': instance.updatedAt.toIso8601String(),
+      'round': instance.round,
+      'recipientName': instance.recipientName,
+      'responseReceivedAt': instance.responseReceivedAt?.toIso8601String(),
+      'responseNotes': instance.responseNotes,
       'recipientAddress': _addressToJson(instance.recipientAddress),
       'returnAddress': _addressToJson(instance.returnAddress),
+      'recipientType': _recipientTypeToJson(instance.recipientType),
     };
 
 AddressModel _$AddressModelFromJson(Map<String, dynamic> json) => AddressModel(

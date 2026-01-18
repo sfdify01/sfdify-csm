@@ -18,6 +18,30 @@ Map<String, dynamic> _addressToJson(AddressEntity address) {
   };
 }
 
+LetterRecipientType _recipientTypeFromJson(String? json) {
+  if (json == null) return LetterRecipientType.bureau;
+  switch (json.toLowerCase()) {
+    case 'creditor':
+      return LetterRecipientType.creditor;
+    case 'collector':
+      return LetterRecipientType.collector;
+    case 'bureau':
+    default:
+      return LetterRecipientType.bureau;
+  }
+}
+
+String _recipientTypeToJson(LetterRecipientType type) {
+  switch (type) {
+    case LetterRecipientType.bureau:
+      return 'bureau';
+    case LetterRecipientType.creditor:
+      return 'creditor';
+    case LetterRecipientType.collector:
+      return 'collector';
+  }
+}
+
 @JsonSerializable(explicitToJson: true)
 class LetterModel extends LetterEntity {
   @JsonKey(fromJson: _addressFromJson, toJson: _addressToJson)
@@ -27,6 +51,10 @@ class LetterModel extends LetterEntity {
   @JsonKey(fromJson: _addressFromJson, toJson: _addressToJson)
   @override
   final AddressEntity returnAddress;
+
+  @JsonKey(fromJson: _recipientTypeFromJson, toJson: _recipientTypeToJson)
+  @override
+  final LetterRecipientType recipientType;
 
   const LetterModel({
     required super.id,
@@ -56,7 +84,16 @@ class LetterModel extends LetterEntity {
     super.returnedAt,
     super.cost,
     required super.updatedAt,
-  }) : super(recipientAddress: recipientAddress, returnAddress: returnAddress);
+    super.round = 1,
+    this.recipientType = LetterRecipientType.bureau,
+    super.recipientName,
+    super.responseReceivedAt,
+    super.responseNotes,
+  }) : super(
+          recipientAddress: recipientAddress,
+          returnAddress: returnAddress,
+          recipientType: recipientType,
+        );
 
   factory LetterModel.fromJson(Map<String, dynamic> json) {
     // Normalize the JSON before parsing
@@ -71,8 +108,15 @@ class LetterModel extends LetterEntity {
 
     // Convert timestamps
     final timestampKeys = [
-      'createdAt', 'updatedAt', 'approvedAt', 'sentAt', 'inTransitAt',
-      'deliveredAt', 'returnedAt', 'expectedDeliveryDate'
+      'createdAt',
+      'updatedAt',
+      'approvedAt',
+      'sentAt',
+      'inTransitAt',
+      'deliveredAt',
+      'returnedAt',
+      'expectedDeliveryDate',
+      'responseReceivedAt',
     ];
 
     for (final key in timestampKeys) {
@@ -103,7 +147,18 @@ class LetterModel extends LetterEntity {
 
     // Map renderVersion from string if needed
     if (normalized['renderVersion'] is String) {
-      normalized['renderVersion'] = int.tryParse(normalized['renderVersion'] as String) ?? 1;
+      normalized['renderVersion'] =
+          int.tryParse(normalized['renderVersion'] as String) ?? 1;
+    }
+
+    // Default round to 1 if not present
+    if (normalized['round'] == null) {
+      normalized['round'] = 1;
+    }
+
+    // Default recipientType to bureau if not present
+    if (normalized['recipientType'] == null) {
+      normalized['recipientType'] = 'bureau';
     }
 
     return normalized;

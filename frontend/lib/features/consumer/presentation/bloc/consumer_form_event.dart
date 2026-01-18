@@ -21,10 +21,14 @@ class ConsumerFormSubmitted extends ConsumerFormEvent {
   final String lastName;
   final String email;
   final String? phone;
+  final DateTime? dateOfBirth;
+  final String? ssnLast4;
   final String? street;
   final String? city;
   final String? state;
   final String? zipCode;
+  final String? smartCreditSource;
+  final String? smartCreditUsername;
   final bool hasConsent;
 
   const ConsumerFormSubmitted({
@@ -32,10 +36,14 @@ class ConsumerFormSubmitted extends ConsumerFormEvent {
     required this.lastName,
     required this.email,
     this.phone,
+    this.dateOfBirth,
+    this.ssnLast4,
     this.street,
     this.city,
     this.state,
     this.zipCode,
+    this.smartCreditSource,
+    this.smartCreditUsername,
     required this.hasConsent,
   });
 
@@ -45,10 +53,14 @@ class ConsumerFormSubmitted extends ConsumerFormEvent {
         lastName,
         email,
         phone,
+        dateOfBirth,
+        ssnLast4,
         street,
         city,
         state,
         zipCode,
+        smartCreditSource,
+        smartCreditUsername,
         hasConsent,
       ];
 }

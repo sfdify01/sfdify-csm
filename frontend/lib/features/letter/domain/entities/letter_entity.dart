@@ -1,6 +1,13 @@
 import 'package:equatable/equatable.dart';
 import 'package:ustaxx_csm/shared/domain/entities/address_entity.dart';
 
+/// Letter recipient type
+enum LetterRecipientType {
+  bureau,
+  creditor,
+  collector,
+}
+
 /// Letter entity representing a generated and mailed dispute letter
 class LetterEntity extends Equatable {
   final String id;
@@ -31,6 +38,13 @@ class LetterEntity extends Equatable {
   final double? cost;
   final DateTime updatedAt;
 
+  // New fields for rounds and recipient types
+  final int round;
+  final LetterRecipientType recipientType;
+  final String? recipientName;
+  final DateTime? responseReceivedAt;
+  final String? responseNotes;
+
   const LetterEntity({
     required this.id,
     required this.disputeId,
@@ -59,6 +73,11 @@ class LetterEntity extends Equatable {
     this.returnedAt,
     this.cost,
     required this.updatedAt,
+    this.round = 1,
+    this.recipientType = LetterRecipientType.bureau,
+    this.recipientName,
+    this.responseReceivedAt,
+    this.responseNotes,
   });
 
   /// Get letter type display name
@@ -68,6 +87,8 @@ class LetterEntity extends Equatable {
         return 'FCRA 609 Information Request';
       case '611_dispute':
         return 'FCRA 611 Dispute';
+      case '605b_id_theft':
+        return 'FCRA 605B Identity Theft';
       case 'mov_request':
         return 'Method of Verification';
       case 'reinvestigation':
@@ -80,6 +101,10 @@ class LetterEntity extends Equatable {
         return 'Identity Theft Block';
       case 'cfpb_complaint':
         return 'CFPB Complaint';
+      case 'cease_desist':
+        return 'Cease & Desist';
+      case 'debt_validation':
+        return 'Debt Validation';
       default:
         return type;
     }
@@ -128,6 +153,8 @@ class LetterEntity extends Equatable {
         return 'Returned to Sender';
       case 'failed':
         return 'Failed';
+      case 'response_received':
+        return 'Response Received';
       default:
         return status;
     }
@@ -154,9 +181,34 @@ class LetterEntity extends Equatable {
       case 'returned_to_sender':
       case 'failed':
         return 'red';
+      case 'response_received':
+        return 'teal';
       default:
         return 'gray';
     }
+  }
+
+  /// Get recipient type display name
+  String get recipientTypeDisplayName {
+    switch (recipientType) {
+      case LetterRecipientType.bureau:
+        return 'Credit Bureau';
+      case LetterRecipientType.creditor:
+        return 'Creditor/Furnisher';
+      case LetterRecipientType.collector:
+        return 'Collection Agency';
+    }
+  }
+
+  /// Get round display name (e.g., "Round 1", "Round 2")
+  String get roundDisplayName => 'Round $round';
+
+  /// Get recipient display name with type
+  String get recipientDisplayName {
+    if (recipientName != null && recipientName!.isNotEmpty) {
+      return recipientName!;
+    }
+    return recipientTypeDisplayName;
   }
 
   /// Check if letter is delivered
@@ -187,6 +239,21 @@ class LetterEntity extends Equatable {
 
   /// Check if letter has tracking
   bool get hasTracking => trackingCode != null && trackingUrl != null;
+
+  /// Check if response has been received
+  bool get hasResponse => responseReceivedAt != null;
+
+  /// Check if this is a followup letter (round > 1)
+  bool get isFollowup => round > 1;
+
+  /// Check if letter is to a bureau
+  bool get isBureauLetter => recipientType == LetterRecipientType.bureau;
+
+  /// Check if letter is to a creditor
+  bool get isCreditorLetter => recipientType == LetterRecipientType.creditor;
+
+  /// Check if letter is to a collector
+  bool get isCollectorLetter => recipientType == LetterRecipientType.collector;
 
   /// Get days since sent
   int? get daysSinceSent {
@@ -235,6 +302,11 @@ class LetterEntity extends Equatable {
         returnedAt,
         cost,
         updatedAt,
+        round,
+        recipientType,
+        recipientName,
+        responseReceivedAt,
+        responseNotes,
       ];
 
   LetterEntity copyWith({
@@ -265,6 +337,11 @@ class LetterEntity extends Equatable {
     DateTime? returnedAt,
     double? cost,
     DateTime? updatedAt,
+    int? round,
+    LetterRecipientType? recipientType,
+    String? recipientName,
+    DateTime? responseReceivedAt,
+    String? responseNotes,
   }) {
     return LetterEntity(
       id: id ?? this.id,
@@ -294,6 +371,11 @@ class LetterEntity extends Equatable {
       returnedAt: returnedAt ?? this.returnedAt,
       cost: cost ?? this.cost,
       updatedAt: updatedAt ?? this.updatedAt,
+      round: round ?? this.round,
+      recipientType: recipientType ?? this.recipientType,
+      recipientName: recipientName ?? this.recipientName,
+      responseReceivedAt: responseReceivedAt ?? this.responseReceivedAt,
+      responseNotes: responseNotes ?? this.responseNotes,
     );
   }
 }

@@ -69,13 +69,23 @@ class ConsumerFormBloc extends Bloc<ConsumerFormEvent, ConsumerFormState> {
       'lastName': event.lastName,
       'email': event.email,
       if (event.phone != null && event.phone!.isNotEmpty) 'phone': event.phone,
+      if (event.dateOfBirth != null) 'dob': event.dateOfBirth!.toIso8601String(),
+      if (event.ssnLast4 != null && event.ssnLast4!.isNotEmpty) 'ssnLast4': event.ssnLast4,
       if (event.street != null && event.street!.isNotEmpty)
-        'address': {
-          'street': event.street,
-          'city': event.city,
-          'state': event.state,
-          'zipCode': event.zipCode,
-        },
+        'addresses': [
+          {
+            'type': 'current',
+            'street1': event.street,
+            'city': event.city,
+            'state': event.state,
+            'zipCode': event.zipCode,
+            'country': 'US',
+            'isPrimary': true,
+          }
+        ],
+      if (event.smartCreditSource != null) 'smartCreditSource': event.smartCreditSource,
+      if (event.smartCreditUsername != null && event.smartCreditUsername!.isNotEmpty)
+        'smartCreditUsername': event.smartCreditUsername,
       'hasConsent': event.hasConsent,
     };
 

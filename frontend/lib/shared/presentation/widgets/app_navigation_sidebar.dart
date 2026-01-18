@@ -143,6 +143,12 @@ class AppNavigationSidebar extends StatelessWidget {
                   isActive: currentRoute.startsWith('/letters'),
                   onTap: () => context.go(RoutePaths.letterList),
                 ),
+                NavigationMenuItem(
+                  icon: Icons.library_books,
+                  label: 'Letter Library',
+                  isActive: currentRoute == RoutePaths.letterLibrary,
+                  onTap: () => context.go(RoutePaths.letterLibrary),
+                ),
 
                 const Gap(16),
 

@@ -350,8 +350,9 @@ class ConsumerListView extends StatelessWidget {
         children: [
           // Table Header
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: Border(
                 bottom: BorderSide(
                   color: Theme.of(context).dividerColor,
@@ -360,12 +361,31 @@ class ConsumerListView extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const SizedBox(width: 56), // Avatar space
+                const SizedBox(width: 48), // Avatar space
                 Expanded(
                   flex: 2,
                   child: Text('CONSUMER', style: _headerStyle(context)),
                 ),
-                Expanded(child: Text('PHONE', style: _headerStyle(context))),
+                SizedBox(
+                  width: 90,
+                  child: Text('DOB', style: _headerStyle(context)),
+                ),
+                SizedBox(
+                  width: 70,
+                  child: Text('ACTIVE', style: _headerStyle(context)),
+                ),
+                SizedBox(
+                  width: 130,
+                  child: Text('STATUS', style: _headerStyle(context)),
+                ),
+                SizedBox(
+                  width: 110,
+                  child: Text('LAST LETTER', style: _headerStyle(context)),
+                ),
+                SizedBox(
+                  width: 130,
+                  child: Text('CREDIT REPORT', style: _headerStyle(context)),
+                ),
                 SizedBox(
                   width: 80,
                   child: Text('ACTIONS', style: _headerStyle(context)),

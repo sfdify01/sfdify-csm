@@ -44,7 +44,13 @@ class _ConsumerFormViewState extends State<ConsumerFormView> {
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
   final _zipCodeController = TextEditingController();
+  final _ssnLast4Controller = TextEditingController();
+  final _smartCreditUsernameController = TextEditingController();
+  final _smartCreditPasswordController = TextEditingController();
+  DateTime? _dateOfBirth;
+  String _smartCreditSource = 'smart_credit';
   bool _hasConsent = false;
+  bool _showSmartCreditPassword = false;
 
   @override
   void dispose() {
@@ -56,6 +62,9 @@ class _ConsumerFormViewState extends State<ConsumerFormView> {
     _cityController.dispose();
     _stateController.dispose();
     _zipCodeController.dispose();
+    _ssnLast4Controller.dispose();
+    _smartCreditUsernameController.dispose();
+    _smartCreditPasswordController.dispose();
     super.dispose();
   }
 
@@ -65,7 +74,47 @@ class _ConsumerFormViewState extends State<ConsumerFormView> {
       _lastNameController.text = state.consumer!.lastName;
       _emailController.text = state.consumer!.email;
       _phoneController.text = state.consumer!.phone ?? '';
-      // Note: Address would need to be fetched from a more complete consumer model
+      _ssnLast4Controller.text = state.consumer!.ssnLast4 ?? '';
+      _dateOfBirth = state.consumer!.dateOfBirth;
+      _smartCreditUsernameController.text = state.consumer!.smartCreditUsername ?? '';
+      if (state.consumer!.smartCreditSource != null) {
+        _smartCreditSource = _smartCreditSourceToString(state.consumer!.smartCreditSource!);
+      }
+      // Populate address from primary address
+      final primaryAddress = state.consumer!.primaryAddress;
+      if (primaryAddress != null) {
+        _streetController.text = primaryAddress.street;
+        _cityController.text = primaryAddress.city;
+        _stateController.text = primaryAddress.state;
+        _zipCodeController.text = primaryAddress.zipCode;
+      }
+      _hasConsent = state.consumer!.hasConsent;
+    }
+  }
+
+  String _smartCreditSourceToString(dynamic source) {
+    if (source.toString().contains('smartCredit')) return 'smart_credit';
+    if (source.toString().contains('identityIq')) return 'identity_iq';
+    if (source.toString().contains('myScoreIq')) return 'my_score_iq';
+    return 'smart_credit';
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  Future<void> _selectDateOfBirth(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _dateOfBirth ?? DateTime(1980, 1, 1),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now().subtract(const Duration(days: 6570)), // 18 years ago
+      helpText: 'Select Date of Birth',
+    );
+    if (picked != null && picked != _dateOfBirth) {
+      setState(() {
+        _dateOfBirth = picked;
+      });
     }
   }
 
@@ -87,10 +136,14 @@ class _ConsumerFormViewState extends State<ConsumerFormView> {
               lastName: _lastNameController.text.trim(),
               email: _emailController.text.trim(),
               phone: _phoneController.text.trim(),
+              dateOfBirth: _dateOfBirth,
+              ssnLast4: _ssnLast4Controller.text.trim(),
               street: _streetController.text.trim(),
               city: _cityController.text.trim(),
               state: _stateController.text.trim(),
               zipCode: _zipCodeController.text.trim(),
+              smartCreditSource: _smartCreditSource,
+              smartCreditUsername: _smartCreditUsernameController.text.trim(),
               hasConsent: _hasConsent,
             ),
           );
@@ -153,6 +206,172 @@ class _ConsumerFormViewState extends State<ConsumerFormView> {
             ),
         };
       },
+    );
+  }
+
+  Widget _buildSmartCreditSection(BuildContext context, ConsumerFormState state) {
+    final theme = Theme.of(context);
+    final isConnected = state.consumer?.isSmartCreditConnected ?? false;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isConnected
+              ? theme.colorScheme.primary.withValues(alpha: 0.5)
+              : theme.colorScheme.outline.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isConnected ? Icons.link : Icons.link_off,
+                color: isConnected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                size: 20,
+              ),
+              const Gap(8),
+              Text(
+                'Credit Report Connection',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              if (isConnected)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle, size: 14, color: Colors.green),
+                      const Gap(4),
+                      Text(
+                        'Connected',
+                        style: theme.textTheme.labelSmall?.copyWith(color: Colors.green),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const Gap(16),
+
+          // Source Dropdown
+          DropdownButtonFormField<String>(
+            value: _smartCreditSource,
+            decoration: const InputDecoration(
+              labelText: 'Credit Report Provider',
+              prefixIcon: Icon(Icons.credit_score),
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: 'smart_credit',
+                child: Text('SmartCredit'),
+              ),
+              DropdownMenuItem(
+                value: 'identity_iq',
+                child: Text('IdentityIQ'),
+              ),
+              DropdownMenuItem(
+                value: 'my_score_iq',
+                child: Text('MyScoreIQ'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _smartCreditSource = value;
+                });
+              }
+            },
+          ),
+          const Gap(16),
+
+          // Username field
+          TextFormField(
+            controller: _smartCreditUsernameController,
+            decoration: const InputDecoration(
+              labelText: 'Username',
+              hintText: 'Enter credit provider username',
+              prefixIcon: Icon(Icons.account_circle_outlined),
+            ),
+            textInputAction: TextInputAction.next,
+          ),
+          const Gap(16),
+
+          // Password field (only for OAuth flow)
+          if (!isConnected) ...[
+            TextFormField(
+              controller: _smartCreditPasswordController,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                hintText: 'Enter credit provider password',
+                prefixIcon: const Icon(Icons.password),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _showSmartCreditPassword ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showSmartCreditPassword = !_showSmartCreditPassword;
+                    });
+                  },
+                ),
+                helperText: 'Password is used only for OAuth connection and is not stored',
+              ),
+              obscureText: !_showSmartCreditPassword,
+              textInputAction: TextInputAction.done,
+            ),
+            const Gap(16),
+
+            // Connect Button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('SmartCredit OAuth connection coming soon'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.link),
+                label: const Text('Connect to Credit Provider'),
+              ),
+            ),
+          ] else ...[
+            // Disconnect Button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Disconnect functionality coming soon'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                ),
+                icon: const Icon(Icons.link_off),
+                label: const Text('Disconnect'),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -280,6 +499,61 @@ class _ConsumerFormViewState extends State<ConsumerFormView> {
               PhoneFormField(
                 controller: _phoneController,
               ),
+              const Gap(16),
+
+              // DOB and SSN Last 4 Row
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      readOnly: true,
+                      controller: TextEditingController(
+                        text: _dateOfBirth != null ? _formatDate(_dateOfBirth!) : '',
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Date of Birth *',
+                        hintText: 'MM/DD/YYYY',
+                        prefixIcon: const Icon(Icons.cake_outlined),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.calendar_today),
+                          onPressed: () => _selectDateOfBirth(context),
+                        ),
+                      ),
+                      onTap: () => _selectDateOfBirth(context),
+                      validator: (value) {
+                        if (_dateOfBirth == null) {
+                          return 'Date of birth is required';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const Gap(16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _ssnLast4Controller,
+                      decoration: const InputDecoration(
+                        labelText: 'SSN Last 4 *',
+                        hintText: '1234',
+                        prefixIcon: Icon(Icons.lock_outline),
+                      ),
+                      keyboardType: TextInputType.number,
+                      maxLength: 4,
+                      obscureText: true,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'SSN last 4 is required';
+                        }
+                        if (value.length != 4 || int.tryParse(value) == null) {
+                          return 'Enter 4 digits';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
               const Gap(24),
 
               // Address Section
@@ -289,6 +563,10 @@ class _ConsumerFormViewState extends State<ConsumerFormView> {
                 stateController: _stateController,
                 zipCodeController: _zipCodeController,
               ),
+              const Gap(24),
+
+              // SmartCredit Credentials Section
+              _buildSmartCreditSection(context, state),
               const Gap(24),
 
               // Consent Section

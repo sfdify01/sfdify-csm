@@ -5,9 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_detail_bloc.dart';
 import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_detail_event.dart';
 import 'package:ustaxx_csm/features/consumer/presentation/bloc/consumer_detail_state.dart';
-import 'package:ustaxx_csm/features/consumer/presentation/widgets/consumer_credit_summary.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/widgets/credit_report_tab.dart';
 import 'package:ustaxx_csm/features/consumer/presentation/widgets/consumer_disputes_tab.dart';
-import 'package:ustaxx_csm/features/consumer/presentation/widgets/consumer_info_card.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/widgets/client_info_tab.dart';
+import 'package:ustaxx_csm/features/consumer/presentation/widgets/notes_tab.dart';
 import 'package:ustaxx_csm/injection/injection.dart';
 
 class ConsumerDetailPage extends StatelessWidget {
@@ -28,8 +29,28 @@ class ConsumerDetailPage extends StatelessWidget {
   }
 }
 
-class ConsumerDetailView extends StatelessWidget {
+class ConsumerDetailView extends StatefulWidget {
   const ConsumerDetailView({super.key});
+
+  @override
+  State<ConsumerDetailView> createState() => _ConsumerDetailViewState();
+}
+
+class _ConsumerDetailViewState extends State<ConsumerDetailView>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,65 +87,42 @@ class ConsumerDetailView extends StatelessWidget {
                 // Header
                 _buildHeader(context, state),
 
-                // Main Content
+                // Tab Bar
+                _buildTabBar(context),
+
+                // Tab Content
                 Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      context
-                          .read<ConsumerDetailBloc>()
-                          .add(const ConsumerDetailRefreshRequested());
-                    },
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Consumer Info Card
-                          ConsumerInfoCard(
-                            consumer: state.consumer!,
-                            onEdit: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Edit consumer coming soon'),
-                                  duration: Duration(seconds: 1),
-                                ),
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      // Credit Report Tab
+                      CreditReportTab(
+                        consumer: state.consumer!,
+                        isSmartCreditConnected: state.isSmartCreditConnected,
+                        onConnect: () {
+                          context.read<ConsumerDetailBloc>().add(
+                                const ConsumerDetailSmartCreditConnectRequested(),
                               );
-                            },
-                          ),
-                          const Gap(24),
-
-                          // Credit Summary
-                          ConsumerCreditSummary(
-                            isConnected: state.isSmartCreditConnected,
-                            creditScore: state.creditScore,
-                            onConnect: () {
-                              context.read<ConsumerDetailBloc>().add(
-                                    const ConsumerDetailSmartCreditConnectRequested(),
-                                  );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content:
-                                      Text('SmartCredit connection coming soon'),
-                                  duration: Duration(seconds: 1),
-                                ),
+                        },
+                        onRefresh: () {
+                          context.read<ConsumerDetailBloc>().add(
+                                const ConsumerDetailCreditReportRefreshRequested(),
                               );
-                            },
-                            onRefresh: () {
-                              context.read<ConsumerDetailBloc>().add(
-                                    const ConsumerDetailCreditReportRefreshRequested(),
-                                  );
-                            },
-                          ),
-                          const Gap(24),
-
-                          // Disputes Tab
-                          ConsumerDisputesTab(
-                            disputes: state.disputes,
-                            consumerId: state.consumer!.id,
-                          ),
-                        ],
+                        },
                       ),
-                    ),
+
+                      // Disputes Tab
+                      ConsumerDisputesTab(
+                        disputes: state.disputes,
+                        consumerId: state.consumer!.id,
+                      ),
+
+                      // Client Information Tab
+                      ClientInfoTab(consumer: state.consumer!),
+
+                      // Notes Tab
+                      NotesTab(consumerId: state.consumer!.id),
+                    ],
                   ),
                 ),
               ],
@@ -158,24 +156,31 @@ class ConsumerDetailView extends StatelessWidget {
           ),
           const Gap(8),
 
-          // Title
+          // Title with status chip
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Text(
-                  state.consumer?.fullName ?? 'Consumer',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (state.consumer != null)
-                  Text(
-                    state.consumer!.email,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      state.consumer?.fullName ?? 'Consumer',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
+                    if (state.consumer != null)
+                      Text(
+                        state.consumer!.email,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                  ],
+                ),
+                const Gap(16),
+                if (state.consumer != null)
+                  _buildStatusChip(context, state.consumer!.status),
               ],
             ),
           ),
@@ -183,15 +188,10 @@ class ConsumerDetailView extends StatelessWidget {
           // Action Buttons
           OutlinedButton.icon(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('View credit report coming soon'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
+              context.go('/consumers/${state.consumer?.id}/edit');
             },
-            icon: const Icon(Icons.credit_score, size: 18),
-            label: const Text('Credit Report'),
+            icon: const Icon(Icons.edit, size: 18),
+            label: const Text('Edit'),
           ),
           const Gap(8),
           FilledButton.icon(
@@ -202,6 +202,110 @@ class ConsumerDetailView extends StatelessWidget {
             label: const Text('New Dispute'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(BuildContext context, dynamic status) {
+    Color backgroundColor;
+    Color textColor;
+    String label;
+    IconData icon;
+
+    final statusString = status.toString().split('.').last;
+    switch (statusString) {
+      case 'unsent':
+        backgroundColor = Colors.grey.shade100;
+        textColor = Colors.grey.shade700;
+        label = 'Unsent';
+        icon = Icons.hourglass_empty;
+        break;
+      case 'awaitingResponse':
+        backgroundColor = Colors.orange.shade50;
+        textColor = Colors.orange.shade700;
+        label = 'Awaiting Response';
+        icon = Icons.schedule;
+        break;
+      case 'inProgress':
+        backgroundColor = Colors.blue.shade50;
+        textColor = Colors.blue.shade700;
+        label = 'In Progress';
+        icon = Icons.pending_actions;
+        break;
+      case 'completed':
+        backgroundColor = Colors.green.shade50;
+        textColor = Colors.green.shade700;
+        label = 'Completed';
+        icon = Icons.check_circle;
+        break;
+      default:
+        backgroundColor = Colors.grey.shade100;
+        textColor = Colors.grey.shade700;
+        label = 'Unknown';
+        icon = Icons.help;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: textColor),
+          const Gap(4),
+          Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.w500,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabBar(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant,
+            width: 1,
+          ),
+        ),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        tabs: const [
+          Tab(
+            icon: Icon(Icons.credit_score),
+            text: 'Credit Report',
+          ),
+          Tab(
+            icon: Icon(Icons.description),
+            text: 'Disputes',
+          ),
+          Tab(
+            icon: Icon(Icons.person),
+            text: 'Client Information',
+          ),
+          Tab(
+            icon: Icon(Icons.note),
+            text: 'Notes',
+          ),
+        ],
+        labelColor: theme.colorScheme.primary,
+        unselectedLabelColor: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+        indicatorColor: theme.colorScheme.primary,
+        indicatorWeight: 3,
       ),
     );
   }
