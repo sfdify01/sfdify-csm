@@ -41,10 +41,7 @@ import { firebaseConfig } from "../../config";
 import {
   Consumer,
   ConsumerConsent,
-  ConsumerDocument,
-  ConsumerDocumentType,
   ConsumerStatus,
-  SmartCreditSourceType,
   Address,
   Phone,
   Email,

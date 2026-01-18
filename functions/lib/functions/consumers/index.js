@@ -180,6 +180,10 @@ async function createConsumerHandler(data, context) {
         emails,
         kycStatus: "pending",
         consent,
+        // New Disputebee-style fields
+        status: "unsent",
+        isActive: true,
+        documents: [],
         createdAt: firestore_1.FieldValue.serverTimestamp(),
         updatedAt: firestore_1.FieldValue.serverTimestamp(),
         createdBy: actorId,

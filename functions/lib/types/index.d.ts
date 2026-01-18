@@ -103,6 +103,19 @@ export interface User {
     lastLoginAt?: Timestamp;
     disabled: boolean;
 }
+export type ConsumerStatus = "unsent" | "awaiting_response" | "in_progress" | "completed";
+export type SmartCreditSourceType = "smart_credit" | "identity_iq" | "my_score_iq";
+export type ConsumerDocumentType = "id_front" | "id_back" | "address_verification" | "ssn_card" | "id_theft_affidavit";
+export interface ConsumerDocument {
+    id: DocumentId;
+    type: ConsumerDocumentType;
+    fileName: string;
+    fileUrl: string;
+    mimeType?: string;
+    fileSize?: number;
+    uploadedAt: Timestamp | FieldValue;
+    uploadedBy: DocumentId;
+}
 export interface ConsumerConsent {
     agreedAt: Timestamp;
     ipAddress: string;
@@ -125,6 +138,13 @@ export interface Consumer {
     kycVerifiedAt?: Timestamp;
     consent: ConsumerConsent;
     smartCreditConnectionId?: DocumentId;
+    status: ConsumerStatus;
+    isActive: boolean;
+    lastSentLetterAt?: Timestamp;
+    lastCreditReportAt?: Timestamp;
+    smartCreditSource?: SmartCreditSourceType;
+    smartCreditUsername?: string;
+    documents: ConsumerDocument[];
     createdAt: Timestamp | FieldValue;
     updatedAt: Timestamp | FieldValue;
     createdBy: DocumentId;
@@ -314,9 +334,11 @@ export interface EvidenceIndexEntry {
     description: string;
     pageInLetter?: number;
 }
+export type LetterRecipientType = "bureau" | "creditor" | "collector";
 export interface Letter {
     id: DocumentId;
     disputeId: DocumentId;
+    consumerId: DocumentId;
     tenantId: DocumentId;
     type: DisputeType;
     templateId: DocumentId;
@@ -354,6 +376,11 @@ export interface Letter {
     approvedAt?: Timestamp;
     qualityChecks?: QualityChecks;
     evidenceIndex: EvidenceIndexEntry[];
+    round: number;
+    recipientType: LetterRecipientType;
+    recipientName?: string;
+    responseReceivedAt?: Timestamp;
+    responseNotes?: string;
 }
 export interface VirusScan {
     status: "pending" | "scanning" | "clean" | "infected" | "error";

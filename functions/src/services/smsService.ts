@@ -79,7 +79,11 @@ class SmsService {
    * Initialize Twilio client
    */
   private initialize(): void {
-    if (twilioConfig.accountSid && twilioConfig.authToken) {
+    // Twilio account SIDs must start with "AC"
+    const isValidAccountSid = twilioConfig.accountSid?.startsWith("AC");
+    const hasAuthToken = !!twilioConfig.authToken && !twilioConfig.authToken.includes("your_");
+
+    if (isValidAccountSid && hasAuthToken) {
       this.client = twilio(twilioConfig.accountSid, twilioConfig.authToken);
     } else {
       logger.warn("[SMS Service] Twilio credentials not configured");

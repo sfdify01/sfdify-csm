@@ -444,6 +444,7 @@ async function generateLetterHandler(
   const letter: Letter = {
     id: letterId,
     disputeId: validatedData.disputeId,
+    consumerId: dispute.consumerId,
     tenantId,
     type: dispute.type,
     templateId: validatedData.templateId,
@@ -471,6 +472,8 @@ async function generateLetterHandler(
     createdAt: now,
     createdBy: actorId,
     evidenceIndex: [],
+    round: 1,
+    recipientType: "bureau",
   };
 
   // Perform quality checks

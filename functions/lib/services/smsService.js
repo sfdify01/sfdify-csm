@@ -71,7 +71,10 @@ class SmsService {
      * Initialize Twilio client
      */
     initialize() {
-        if (config_1.twilioConfig.accountSid && config_1.twilioConfig.authToken) {
+        // Twilio account SIDs must start with "AC"
+        const isValidAccountSid = config_1.twilioConfig.accountSid?.startsWith("AC");
+        const hasAuthToken = !!config_1.twilioConfig.authToken && !config_1.twilioConfig.authToken.includes("your_");
+        if (isValidAccountSid && hasAuthToken) {
             this.client = (0, twilio_1.default)(config_1.twilioConfig.accountSid, config_1.twilioConfig.authToken);
         }
         else {

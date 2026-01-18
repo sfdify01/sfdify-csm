@@ -314,6 +314,7 @@ async function generateLetterHandler(data, context) {
     const letter = {
         id: letterId,
         disputeId: validatedData.disputeId,
+        consumerId: dispute.consumerId,
         tenantId,
         type: dispute.type,
         templateId: validatedData.templateId,
@@ -341,6 +342,8 @@ async function generateLetterHandler(data, context) {
         createdAt: now,
         createdBy: actorId,
         evidenceIndex: [],
+        round: 1,
+        recipientType: "bureau",
     };
     // Perform quality checks
     letter.qualityChecks = performQualityChecks(letter, consumer);
