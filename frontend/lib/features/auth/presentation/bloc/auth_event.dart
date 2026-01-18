@@ -60,3 +60,13 @@ class AuthStateChanged extends AuthEvent {
   @override
   List<Object?> get props => [authState];
 }
+
+/// Request a token refresh (for API calls that fail due to expired token)
+class AuthTokenRefreshRequested extends AuthEvent {
+  const AuthTokenRefreshRequested();
+}
+
+/// Clear any error message
+class AuthClearError extends AuthEvent {
+  const AuthClearError();
+}

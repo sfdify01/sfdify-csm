@@ -8,19 +8,15 @@
  */
 
 import axios, { AxiosInstance, AxiosError } from "axios";
-import { smartCreditConfig, isEmulator } from "../config";
+import { smartCreditConfig } from "../config";
 import { db } from "../admin";
 import { encryptPii, decryptPii } from "../utils/encryption";
 import * as logger from "firebase-functions/logger";
 import { Timestamp } from "firebase-admin/firestore";
 import {
   SmartCreditConnection,
-  CreditReport,
   Tradeline,
   Bureau,
-  ScoreFactor,
-  Inquiry,
-  ReportSummary,
   PaymentHistoryEntry,
 } from "../types";
 

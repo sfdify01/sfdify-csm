@@ -52,9 +52,13 @@ const auth_1 = require("../../middleware/auth");
 const validation_1 = require("../../utils/validation");
 const errors_1 = require("../../utils/errors");
 const audit_1 = require("../../utils/audit");
+const pdfGenerator_1 = require("../../utils/pdfGenerator");
+const lobService_1 = require("../../services/lobService");
 const config_1 = require("../../config");
 const encryption_1 = require("../../utils/encryption");
+const handlebars_1 = __importDefault(require("handlebars"));
 const joi_1 = __importDefault(require("joi"));
+const logger = __importStar(require("firebase-functions/logger"));
 // ============================================================================
 // Constants
 // ============================================================================
@@ -181,16 +185,64 @@ function performQualityChecks(letter, consumer) {
         checkedAt: firestore_1.FieldValue.serverTimestamp(),
     };
 }
+// ============================================================================
+// Handlebars Configuration
+// ============================================================================
+// Register custom Handlebars helpers
+handlebars_1.default.registerHelper("formatDate", (date) => {
+    if (!date)
+        return "";
+    const d = typeof date === "string" ? new Date(date) : date;
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+});
+handlebars_1.default.registerHelper("formatCurrency", (amount) => {
+    if (amount === undefined || amount === null)
+        return "";
+    return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+    }).format(amount);
+});
+handlebars_1.default.registerHelper("uppercase", (str) => {
+    return str ? str.toUpperCase() : "";
+});
+handlebars_1.default.registerHelper("lowercase", (str) => {
+    return str ? str.toLowerCase() : "";
+});
+handlebars_1.default.registerHelper("eq", (a, b) => {
+    return a === b;
+});
+handlebars_1.default.registerHelper("ne", (a, b) => {
+    return a !== b;
+});
+handlebars_1.default.registerHelper("or", (...args) => {
+    // Remove the last argument (Handlebars options object)
+    args.pop();
+    return args.some(Boolean);
+});
+handlebars_1.default.registerHelper("and", (...args) => {
+    // Remove the last argument (Handlebars options object)
+    args.pop();
+    return args.every(Boolean);
+});
 /**
- * Simple template rendering (in production, use Handlebars)
+ * Render template using Handlebars
  */
 function renderTemplate(template, variables) {
-    let rendered = template;
-    for (const [key, value] of Object.entries(variables)) {
-        const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "g");
-        rendered = rendered.replace(regex, String(value || ""));
+    try {
+        const compiled = handlebars_1.default.compile(template, { strict: false });
+        return compiled(variables);
     }
-    return rendered;
+    catch (error) {
+        logger.error("[Letter] Template rendering error", { error });
+        // Fallback to simple replacement if Handlebars fails
+        let rendered = template;
+        for (const [key, value] of Object.entries(variables)) {
+            const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "g");
+            rendered = rendered.replace(regex, String(value || ""));
+        }
+        return rendered;
+    }
 }
 // ============================================================================
 // lettersGenerate - Generate a letter from template
@@ -429,57 +481,116 @@ async function sendLetterHandler(data, context) {
         createdAt: firestore_1.FieldValue.serverTimestamp(),
         status: "pending",
     });
-    // Update to queued status
+    // Update to rendering status
     const mailType = validatedData.mailType || currentLetter.mailType;
-    const newStatusHistory = addStatusHistory(currentLetter.statusHistory, "queued", actorId);
-    // Calculate estimated cost (in production, get from Lob API)
-    const costEstimate = {
-        printing: 0.50,
-        postage: mailType === "usps_first_class" ? 0.55 :
-            mailType === "usps_certified" ? 3.75 : 7.50,
-        certifiedFee: mailType.includes("certified") ? 3.75 : undefined,
-        total: 0,
-        currency: "USD",
-    };
-    costEstimate.total = costEstimate.printing + costEstimate.postage + (costEstimate.certifiedFee || 0);
+    let newStatusHistory = addStatusHistory(currentLetter.statusHistory, "rendering", actorId);
     await letterRef.update({
-        status: "queued",
+        status: "rendering",
         statusHistory: newStatusHistory,
         mailType,
-        cost: costEstimate,
-        sentAt: firestore_1.FieldValue.serverTimestamp(),
     });
-    // In production, this would:
-    // 1. Generate PDF from content
-    // 2. Upload to Lob
-    // 3. Store lobId and lobUrl
-    // 4. Handle scheduled send if specified
-    // For now, simulate queued status
-    // The actual Lob integration would be handled by a separate background function
-    // Get updated letter
-    const updatedDoc = await letterRef.get();
-    const updatedLetter = { id: updatedDoc.id, ...updatedDoc.data() };
-    // Update dispute status to mailed
-    await admin_1.db.collection("disputes").doc(currentLetter.disputeId).update({
-        status: "mailed",
-        "timestamps.mailedAt": firestore_1.FieldValue.serverTimestamp(),
-        updatedAt: firestore_1.FieldValue.serverTimestamp(),
-    });
-    // Audit log
-    await (0, audit_1.logAuditEvent)({
-        tenantId,
-        actor: { userId: actorId, email: actorEmail, role: actorRole, ip, userAgent },
-        entity: "letter",
-        entityId: validatedData.letterId,
-        action: "send",
-        actionDetail: `Queued for ${mailType} delivery`,
-        previousState: { status: currentLetter.status },
-        newState: { status: "queued", mailType, cost: costEstimate },
-    });
-    return {
-        success: true,
-        data: updatedLetter,
-    };
+    try {
+        // Step 1: Generate PDF from content
+        logger.info("[Letter] Generating PDF", { letterId: validatedData.letterId });
+        const contentHtml = currentLetter.contentHtml || (0, pdfGenerator_1.markdownToHtml)(currentLetter.contentMarkdown || "");
+        const storagePath = (0, pdfGenerator_1.generateLetterPdfPath)(tenantId, validatedData.letterId);
+        const pdfResult = await (0, pdfGenerator_1.generateAndUploadPdf)(contentHtml, storagePath, {
+            format: "Letter",
+            margin: { top: "1in", right: "1in", bottom: "1in", left: "1in" },
+        });
+        // Update with PDF info
+        await letterRef.update({
+            pdfUrl: pdfResult.signedUrl,
+            pdfHash: pdfResult.hash,
+            pdfSizeBytes: pdfResult.sizeBytes,
+            pageCount: pdfResult.pageCount,
+        });
+        // Step 2: Calculate cost estimate
+        const costEstimate = lobService_1.lobService.estimateCost(pdfResult.pageCount, mailType);
+        // Step 3: Send to Lob
+        logger.info("[Letter] Sending to Lob", {
+            letterId: validatedData.letterId,
+            mailType,
+            pageCount: pdfResult.pageCount,
+        });
+        const lobLetter = await lobService_1.lobService.createLetter({
+            to: currentLetter.recipientAddress,
+            from: currentLetter.returnAddress,
+            file: pdfResult.signedUrl,
+            fileType: "pdf",
+            description: `Dispute Letter - ${validatedData.letterId}`,
+            mailType,
+            metadata: {
+                letterId: validatedData.letterId,
+                tenantId,
+                disputeId: currentLetter.disputeId,
+            },
+            idempotencyKey: validatedData.idempotencyKey,
+        });
+        // Step 4: Update letter with Lob info
+        newStatusHistory = addStatusHistory(newStatusHistory, "queued", actorId);
+        await letterRef.update({
+            status: "queued",
+            statusHistory: newStatusHistory,
+            lobId: lobLetter.id,
+            lobUrl: lobLetter.url,
+            trackingNumber: lobLetter.tracking_number,
+            "mailTypeDetail.service": lobLetter.carrier,
+            "mailTypeDetail.returnReceipt": mailType === "usps_certified_return_receipt",
+            "mailTypeDetail.extraService": lobLetter.extra_service,
+            cost: {
+                printing: costEstimate.printing,
+                postage: costEstimate.postage,
+                certifiedFee: costEstimate.certifiedFee,
+                total: costEstimate.total,
+                currency: costEstimate.currency,
+            },
+            sentAt: firestore_1.FieldValue.serverTimestamp(),
+            "qualityChecks.pdfIntegrityVerified": true,
+        });
+        logger.info("[Letter] Successfully queued with Lob", {
+            letterId: validatedData.letterId,
+            lobId: lobLetter.id,
+            expectedDelivery: lobLetter.expected_delivery_date,
+        });
+        // Get updated letter
+        const updatedDoc = await letterRef.get();
+        const updatedLetter = { id: updatedDoc.id, ...updatedDoc.data() };
+        // Update dispute status to mailed
+        await admin_1.db.collection("disputes").doc(currentLetter.disputeId).update({
+            status: "mailed",
+            "timestamps.mailedAt": firestore_1.FieldValue.serverTimestamp(),
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        });
+        // Audit log
+        await (0, audit_1.logAuditEvent)({
+            tenantId,
+            actor: { userId: actorId, email: actorEmail, role: actorRole, ip, userAgent },
+            entity: "letter",
+            entityId: validatedData.letterId,
+            action: "send",
+            actionDetail: `Queued for ${mailType} delivery`,
+            previousState: { status: currentLetter.status },
+            newState: { status: "queued", mailType, cost: costEstimate },
+        });
+        return {
+            success: true,
+            data: updatedLetter,
+        };
+    }
+    catch (error) {
+        // Revert to draft status on failure
+        logger.error("[Letter] Failed to send letter", {
+            letterId: validatedData.letterId,
+            error: error instanceof Error ? error.message : "Unknown error",
+        });
+        newStatusHistory = addStatusHistory(currentLetter.statusHistory, "draft", actorId);
+        await letterRef.update({
+            status: "draft",
+            statusHistory: newStatusHistory,
+        });
+        throw new errors_1.AppError(errors_1.ErrorCode.EXTERNAL_SERVICE_ERROR, `Failed to send letter: ${error instanceof Error ? error.message : "Unknown error"}`, 500);
+    }
 }
 exports.lettersSend = functions.https.onCall((0, errors_1.withErrorHandling)((0, auth_1.withAuth)(["letters:send"], sendLetterHandler)));
 // ============================================================================

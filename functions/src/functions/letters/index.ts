@@ -768,6 +768,34 @@ async function sendLetterHandler(
       lobId: lobLetter.id,
       expectedDelivery: lobLetter.expected_delivery_date,
     });
+
+    // Get updated letter
+    const updatedDoc = await letterRef.get();
+    const updatedLetter = { id: updatedDoc.id, ...updatedDoc.data() } as Letter;
+
+    // Update dispute status to mailed
+    await db.collection("disputes").doc(currentLetter.disputeId).update({
+      status: "mailed",
+      "timestamps.mailedAt": FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    // Audit log
+    await logAuditEvent({
+      tenantId,
+      actor: { userId: actorId, email: actorEmail, role: actorRole, ip, userAgent },
+      entity: "letter",
+      entityId: validatedData.letterId,
+      action: "send",
+      actionDetail: `Queued for ${mailType} delivery`,
+      previousState: { status: currentLetter.status },
+      newState: { status: "queued", mailType, cost: costEstimate },
+    });
+
+    return {
+      success: true,
+      data: updatedLetter,
+    };
   } catch (error) {
     // Revert to draft status on failure
     logger.error("[Letter] Failed to send letter", {
@@ -787,34 +815,6 @@ async function sendLetterHandler(
       500
     );
   }
-
-  // Get updated letter
-  const updatedDoc = await letterRef.get();
-  const updatedLetter = { id: updatedDoc.id, ...updatedDoc.data() } as Letter;
-
-  // Update dispute status to mailed
-  await db.collection("disputes").doc(currentLetter.disputeId).update({
-    status: "mailed",
-    "timestamps.mailedAt": FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  });
-
-  // Audit log
-  await logAuditEvent({
-    tenantId,
-    actor: { userId: actorId, email: actorEmail, role: actorRole, ip, userAgent },
-    entity: "letter",
-    entityId: validatedData.letterId,
-    action: "send",
-    actionDetail: `Queued for ${mailType} delivery`,
-    previousState: { status: currentLetter.status },
-    newState: { status: "queued", mailType, cost: costEstimate },
-  });
-
-  return {
-    success: true,
-    data: updatedLetter,
-  };
 }
 
 export const lettersSend = functions.https.onCall(

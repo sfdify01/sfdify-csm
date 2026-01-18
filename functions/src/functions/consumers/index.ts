@@ -31,7 +31,6 @@ import {
 } from "../../utils/errors";
 import {
   encryptPii,
-  decryptPii,
   decryptPiiFields,
   hashPii,
   maskValue,
@@ -732,10 +731,16 @@ export const consumersSmartCreditDisconnect = functions.https.onCall(
 // consumersReportsRefresh - Refresh credit reports from SmartCredit
 // ============================================================================
 
+interface RefreshResult {
+  bureau: string;
+  success: boolean;
+  error?: string;
+}
+
 async function reportsRefreshHandler(
   data: RefreshReportsInput,
   context: RequestContext
-): Promise<ApiResponse<{ requested: boolean; bureaus: string[] }>> {
+): Promise<ApiResponse<{ requested: boolean; bureaus: string[]; results: RefreshResult[] }>> {
   const { tenantId, userId: actorId, email: actorEmail, role: actorRole, ip, userAgent } = context;
 
   // Validate input

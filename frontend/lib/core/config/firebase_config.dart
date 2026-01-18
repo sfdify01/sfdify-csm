@@ -64,9 +64,9 @@ abstract class EnvironmentConfig {
   /// Current environment.
   ///
   /// Determined by --dart-define=ENV compile-time constant.
-  /// Defaults to 'dev' if not specified.
+  /// Defaults to 'prod'. Use --dart-define=ENV=dev for local development.
   static Environment get current {
-    const env = String.fromEnvironment('ENV', defaultValue: 'dev');
+    const env = String.fromEnvironment('ENV', defaultValue: 'prod');
     switch (env.toLowerCase()) {
       case 'staging':
       case 'stg':

@@ -6,7 +6,7 @@
  */
 
 import sgMail, { MailDataRequired } from "@sendgrid/mail";
-import { sendgridConfig, isEmulator } from "../config";
+import { sendgridConfig } from "../config";
 import * as logger from "firebase-functions/logger";
 
 // ============================================================================
@@ -122,43 +122,24 @@ class EmailService {
     }
 
     try {
-      const msg: MailDataRequired = {
+      // Build message object - use type assertion since SendGrid's types are overly strict
+      // When using templateId, content is not required
+      const msg = {
         to: options.to,
         from: options.from || {
           email: sendgridConfig.fromEmail,
           name: sendgridConfig.fromName,
         },
         subject: options.subject,
-      };
-
-      // Add content - template or direct content
-      if (options.templateId) {
-        msg.templateId = options.templateId;
-        if (options.templateData) {
-          msg.dynamicTemplateData = options.templateData;
-        }
-      } else if (options.html) {
-        msg.html = options.html;
-        if (options.text) {
-          msg.text = options.text;
-        }
-      } else if (options.text) {
-        msg.text = options.text;
-      }
-
-      // Add optional fields
-      if (options.replyTo) {
-        msg.replyTo = options.replyTo;
-      }
-      if (options.attachments) {
-        msg.attachments = options.attachments;
-      }
-      if (options.categories) {
-        msg.categories = options.categories;
-      }
-      if (options.sendAt) {
-        msg.sendAt = options.sendAt;
-      }
+        ...(options.templateId && { templateId: options.templateId }),
+        ...(options.templateId && options.templateData && { dynamicTemplateData: options.templateData }),
+        ...(!options.templateId && options.html && { html: options.html }),
+        ...(!options.templateId && options.text && { text: options.text }),
+        ...(options.replyTo && { replyTo: options.replyTo }),
+        ...(options.attachments && { attachments: options.attachments }),
+        ...(options.categories && { categories: options.categories }),
+        ...(options.sendAt && { sendAt: options.sendAt }),
+      } as MailDataRequired;
 
       const [response] = await sgMail.send(msg);
 

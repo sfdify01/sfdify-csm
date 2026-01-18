@@ -23,4 +23,5 @@ __exportStar(require("./encryption"), exports);
 __exportStar(require("./audit"), exports);
 __exportStar(require("./validation"), exports);
 __exportStar(require("./errors"), exports);
+__exportStar(require("./pdfGenerator"), exports);
 //# sourceMappingURL=index.js.map

@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 
 /// API response wrapper matching backend response structure
@@ -117,6 +118,7 @@ class CloudFunctionsService {
     T Function(Map<String, dynamic>)? fromJson,
   }) async {
     try {
+      debugPrint('[CloudFunctions] Calling $functionName with data: $data');
       final callable = _functions.httpsCallable(functionName);
       final result = await callable.call<Map<String, dynamic>>(data).timeout(
         const Duration(seconds: 30),
@@ -127,8 +129,10 @@ class CloudFunctionsService {
       );
 
       final responseData = result.data;
+      debugPrint('[CloudFunctions] Response from $functionName: $responseData');
       return ApiResponse.fromJson(responseData, fromJson);
     } on FirebaseFunctionsException catch (e) {
+      debugPrint('[CloudFunctions] FirebaseFunctionsException: ${e.code} - ${e.message} - ${e.details}');
       return ApiResponse(
         success: false,
         error: ApiError(
@@ -138,6 +142,7 @@ class CloudFunctionsService {
         ),
       );
     } catch (e) {
+      debugPrint('[CloudFunctions] Unexpected error: $e');
       return ApiResponse(
         success: false,
         error: ApiError(
@@ -505,6 +510,16 @@ class CloudFunctionsService {
           'plan': plan,
         },
         fromJson: fromJson,
+      );
+
+  /// Request a password reset email
+  Future<ApiResponse<Map<String, dynamic>>> authRequestPasswordReset({
+    required String email,
+  }) =>
+      call(
+        functionName: 'authRequestPasswordReset',
+        data: {'email': email},
+        fromJson: (json) => json,
       );
 
   // ============================================================================

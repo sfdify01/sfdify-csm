@@ -6,7 +6,7 @@
  */
 
 import twilio from "twilio";
-import { twilioConfig, isEmulator } from "../config";
+import { twilioConfig } from "../config";
 import * as logger from "firebase-functions/logger";
 
 // ============================================================================

@@ -23,21 +23,29 @@ Future<void> bootstrap(FutureOr<Widget> Function() builder) async {
   );
 
   // Configure Firebase emulators for local development
+  debugPrint('[Bootstrap] Environment: ${EnvironmentConfig.name}, useEmulator: ${FirebaseConfig.useEmulator}');
   if (FirebaseConfig.useEmulator) {
+    debugPrint('[Bootstrap] Configuring Firebase emulators...');
+    debugPrint('[Bootstrap] Auth emulator: ${FirebaseConfig.emulatorHost}:${FirebaseConfig.authEmulatorPort}');
     await FirebaseAuth.instance.useAuthEmulator(
       FirebaseConfig.emulatorHost,
       FirebaseConfig.authEmulatorPort,
     );
 
-    FirebaseFunctions.instance.useFunctionsEmulator(
+    // Configure the regional instance (same as used in register_module.dart)
+    debugPrint('[Bootstrap] Functions emulator: ${FirebaseConfig.emulatorHost}:${FirebaseConfig.functionsEmulatorPort} (region: ${FirebaseConfig.region})');
+    FirebaseFunctions.instanceFor(region: FirebaseConfig.region)
+        .useFunctionsEmulator(
       FirebaseConfig.emulatorHost,
       FirebaseConfig.functionsEmulatorPort,
     );
 
+    debugPrint('[Bootstrap] Storage emulator: ${FirebaseConfig.emulatorHost}:${FirebaseConfig.storageEmulatorPort}');
     await FirebaseStorage.instance.useStorageEmulator(
       FirebaseConfig.emulatorHost,
       FirebaseConfig.storageEmulatorPort,
     );
+    debugPrint('[Bootstrap] All emulators configured successfully');
   }
 
   // Initialize Crashlytics error handling (only on supported platforms)

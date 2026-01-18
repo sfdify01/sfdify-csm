@@ -133,12 +133,6 @@ extension GetItInjectableX on _i174.GetIt {
     gh.singleton<_i816.CloudFunctionsService>(
       () => _i816.CloudFunctionsService(gh<_i809.FirebaseFunctions>()),
     );
-    gh.singleton<_i781.FirebaseAuthService>(
-      () => _i781.FirebaseAuthService(
-        gh<_i59.FirebaseAuth>(),
-        gh<_i816.CloudFunctionsService>(),
-      ),
-    );
     gh.singleton<_i161.ErrorTracker>(
       () => _i161.ErrorTracker(
         gh<_i141.FirebaseCrashlytics>(),
@@ -148,6 +142,13 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i717.DisputeRemoteDataSource>(
       () =>
           _i717.DisputeRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
+    );
+    gh.singleton<_i781.FirebaseAuthService>(
+      () => _i781.FirebaseAuthService(
+        gh<_i59.FirebaseAuth>(),
+        gh<_i816.CloudFunctionsService>(),
+        gh<_i974.Logger>(),
+      ),
     );
     gh.factory<_i466.UserRemoteDataSource>(
       () => _i466.UserRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
@@ -174,7 +175,7 @@ extension GetItInjectableX on _i174.GetIt {
           _i391.ConsumerRemoteDataSourceImpl(gh<_i816.CloudFunctionsService>()),
     );
     gh.singleton<_i59.AuthBloc>(
-      () => _i59.AuthBloc(gh<_i781.FirebaseAuthService>()),
+      () => _i59.AuthBloc(gh<_i781.FirebaseAuthService>(), gh<_i974.Logger>()),
     );
     gh.factory<_i66.HomeRepository>(
       () => _i6.HomeRepositoryImpl(gh<_i75.HomeRemoteDataSource>()),

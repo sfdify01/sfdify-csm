@@ -8,7 +8,7 @@
  */
 
 import axios, { AxiosInstance, AxiosError } from "axios";
-import { lobConfig, isEmulator } from "../config";
+import { lobConfig } from "../config";
 import * as logger from "firebase-functions/logger";
 import { MailingAddress, MailType } from "../types";
 
@@ -87,7 +87,7 @@ export interface LobLetter {
   tracking_number?: string;
   tracking_events: LobTrackingEvent[];
   url: string;
-  thumbnails: { small: string; medium: string; large: string }[];
+  thumbnails: { small: string; medium: string; large: string };
   object: "letter";
 }
 
@@ -354,12 +354,7 @@ class LobService {
         requestData.file = options.file;
       }
     } else {
-      // Buffer - need to upload as multipart
-      const formData = new FormData();
-      const blob = new Blob([options.file], { type: "application/pdf" });
-      formData.append("file", blob, "letter.pdf");
-
-      // For multipart, we need different handling
+      // Buffer - convert to base64 for Lob API
       requestData.file = options.file.toString("base64");
     }
 

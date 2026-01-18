@@ -5,7 +5,7 @@
  * Optimized for serverless environments using @sparticuz/chromium.
  */
 
-import puppeteer, { Browser, PDFOptions } from "puppeteer-core";
+import puppeteer, { Browser, PDFOptions, PuppeteerLaunchOptions } from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import { storage } from "../admin";
 import { firebaseConfig, isEmulator } from "../config";
@@ -192,7 +192,7 @@ const HTML_WRAPPER = `
 /**
  * Get browser launch options based on environment
  */
-async function getBrowserLaunchOptions(): Promise<puppeteer.PuppeteerLaunchOptions> {
+async function getBrowserLaunchOptions(): Promise<PuppeteerLaunchOptions> {
   if (isEmulator) {
     // In emulator/development, use local Chrome
     return {

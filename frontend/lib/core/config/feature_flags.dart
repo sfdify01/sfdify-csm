@@ -49,12 +49,13 @@ class FeatureFlags {
       );
 
       // Set default values (used when Remote Config fetch fails)
+      // In production, Firebase auth is enabled by default for reliability
       await _remoteConfig.setDefaults({
-        'use_firebase_auth': false,
-        'use_firebase_disputes': false,
-        'use_firebase_consumers': false,
-        'use_firebase_letters': false,
-        'firebase_rollout_pct': 0,
+        'use_firebase_auth': true,
+        'use_firebase_disputes': true,
+        'use_firebase_consumers': true,
+        'use_firebase_letters': true,
+        'firebase_rollout_pct': 100,
         'firebase_user_whitelist': '',
       });
 
