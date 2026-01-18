@@ -22,6 +22,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthBlocState> {
     on<AuthStateChanged>(_onStateChanged);
     on<AuthTokenRefreshRequested>(_onTokenRefreshRequested);
     on<AuthClearError>(_onClearError);
+    on<AuthPasswordResetRequested>(_onPasswordResetRequested);
 
     // Listen to auth state changes from Firebase
     _authSubscription = _authService.authStateChanges.listen(
@@ -199,6 +200,32 @@ class AuthBloc extends Bloc<AuthEvent, AuthBlocState> {
     Emitter<AuthBlocState> emit,
   ) {
     emit(state.copyWith(errorMessage: null));
+  }
+
+  Future<void> _onPasswordResetRequested(
+    AuthPasswordResetRequested event,
+    Emitter<AuthBlocState> emit,
+  ) async {
+    _logger.i('Password reset requested for: ${event.email}');
+    emit(state.copyWith(status: AuthStatus.loading, errorMessage: null));
+
+    try {
+      await _authService.sendPasswordResetEmail(event.email);
+      _logger.i('Password reset email sent');
+      emit(state.copyWith(status: AuthStatus.passwordResetSent));
+    } on AuthServiceException catch (e) {
+      _logger.w('Password reset failed: ${e.code} - ${e.message}');
+      emit(state.copyWith(
+        status: AuthStatus.unauthenticated,
+        errorMessage: e.message,
+      ));
+    } catch (e) {
+      _logger.e('Unexpected password reset error', error: e);
+      emit(state.copyWith(
+        status: AuthStatus.unauthenticated,
+        errorMessage: 'Failed to send password reset email. Please try again.',
+      ));
+    }
   }
 
   @override

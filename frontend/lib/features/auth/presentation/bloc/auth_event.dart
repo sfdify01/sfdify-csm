@@ -70,3 +70,13 @@ class AuthTokenRefreshRequested extends AuthEvent {
 class AuthClearError extends AuthEvent {
   const AuthClearError();
 }
+
+/// User requested password reset
+class AuthPasswordResetRequested extends AuthEvent {
+  const AuthPasswordResetRequested({required this.email});
+
+  final String email;
+
+  @override
+  List<Object?> get props => [email];
+}

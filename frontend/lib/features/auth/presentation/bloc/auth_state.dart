@@ -5,6 +5,7 @@ enum AuthStatus {
   loading,
   authenticated,
   unauthenticated,
+  passwordResetSent,
 }
 
 class AuthBlocState extends Equatable {
