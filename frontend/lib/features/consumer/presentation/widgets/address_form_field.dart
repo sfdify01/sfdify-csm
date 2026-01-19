@@ -42,11 +42,17 @@ class AddressFormField extends StatelessWidget {
         TextFormField(
           controller: streetController,
           decoration: const InputDecoration(
-            labelText: 'Street Address',
+            labelText: 'Street Address *',
             hintText: '123 Main Street, Apt 4B',
             prefixIcon: Icon(Icons.home_outlined),
           ),
           textInputAction: TextInputAction.next,
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Street address is required';
+            }
+            return null;
+          },
         ),
         const Gap(16),
 
@@ -59,10 +65,16 @@ class AddressFormField extends StatelessWidget {
               child: TextFormField(
                 controller: cityController,
                 decoration: const InputDecoration(
-                  labelText: 'City',
+                  labelText: 'City *',
                   hintText: 'New York',
                 ),
                 textInputAction: TextInputAction.next,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'City is required';
+                  }
+                  return null;
+                },
               ),
             ),
             const Gap(16),
@@ -74,7 +86,7 @@ class AddressFormField extends StatelessWidget {
                     ? null
                     : stateController?.text,
                 decoration: const InputDecoration(
-                  labelText: 'State',
+                  labelText: 'State *',
                 ),
                 items: _usStates
                     .map((state) => DropdownMenuItem(
@@ -87,6 +99,12 @@ class AddressFormField extends StatelessWidget {
                     stateController!.text = value;
                   }
                 },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'State is required';
+                  }
+                  return null;
+                },
               ),
             ),
             const Gap(16),
@@ -96,16 +114,17 @@ class AddressFormField extends StatelessWidget {
               child: TextFormField(
                 controller: zipCodeController,
                 decoration: const InputDecoration(
-                  labelText: 'ZIP Code',
+                  labelText: 'ZIP Code *',
                   hintText: '10001',
                 ),
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    if (!RegExp(r'^\d{5}(-\d{4})?$').hasMatch(value)) {
-                      return 'Invalid ZIP';
-                    }
+                  if (value == null || value.trim().isEmpty) {
+                    return 'ZIP is required';
+                  }
+                  if (!RegExp(r'^\d{5}(-\d{4})?$').hasMatch(value)) {
+                    return 'Invalid ZIP';
                   }
                   return null;
                 },

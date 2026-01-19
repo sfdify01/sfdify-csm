@@ -64,29 +64,63 @@ class ConsumerFormBloc extends Bloc<ConsumerFormEvent, ConsumerFormState> {
   ) async {
     emit(state.copyWith(status: ConsumerFormStatus.submitting));
 
+    // Format date as YYYY-MM-DD
+    String? formattedDob;
+    if (event.dateOfBirth != null) {
+      final dob = event.dateOfBirth!;
+      formattedDob = '${dob.year}-${dob.month.toString().padLeft(2, '0')}-${dob.day.toString().padLeft(2, '0')}';
+    }
+
+    // Format phone to E.164 format (strip formatting and add +1 for US numbers)
+    String? formattedPhone;
+    if (event.phone != null && event.phone!.isNotEmpty) {
+      final digits = event.phone!.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.length == 10) {
+        formattedPhone = '+1$digits'; // US phone number
+      } else if (digits.length == 11 && digits.startsWith('1')) {
+        formattedPhone = '+$digits';
+      }
+    }
+
     final data = {
       'firstName': event.firstName,
       'lastName': event.lastName,
-      'email': event.email,
-      if (event.phone != null && event.phone!.isNotEmpty) 'phone': event.phone,
-      if (event.dateOfBirth != null) 'dob': event.dateOfBirth!.toIso8601String(),
+      if (formattedDob != null) 'dob': formattedDob,
       if (event.ssnLast4 != null && event.ssnLast4!.isNotEmpty) 'ssnLast4': event.ssnLast4,
-      if (event.street != null && event.street!.isNotEmpty)
-        'addresses': [
+      'addresses': [
+        {
+          'type': 'current',
+          'street1': event.street,
+          'city': event.city,
+          'state': event.state,
+          'zipCode': event.zipCode,
+          'country': 'US',
+          'isPrimary': true,
+        }
+      ],
+      if (formattedPhone != null)
+        'phones': [
           {
-            'type': 'current',
-            'street1': event.street,
-            'city': event.city,
-            'state': event.state,
-            'zipCode': event.zipCode,
-            'country': 'US',
+            'type': 'mobile',
+            'number': formattedPhone,
+            'isPrimary': true,
+          }
+        ],
+      if (event.email.isNotEmpty)
+        'emails': [
+          {
+            'address': event.email,
             'isPrimary': true,
           }
         ],
       if (event.smartCreditSource != null) 'smartCreditSource': event.smartCreditSource,
       if (event.smartCreditUsername != null && event.smartCreditUsername!.isNotEmpty)
         'smartCreditUsername': event.smartCreditUsername,
-      'hasConsent': event.hasConsent,
+      'consent': {
+        'termsAccepted': event.hasConsent,
+        'privacyAccepted': event.hasConsent,
+        'fcraDisclosureAccepted': event.hasConsent,
+      },
     };
 
     final result = state.isEditMode && _editingConsumerId != null
