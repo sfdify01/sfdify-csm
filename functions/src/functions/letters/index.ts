@@ -718,10 +718,66 @@ async function sendLetterHandler(
       pageCount: pdfResult.pageCount,
     });
 
-    // Step 2: Calculate cost estimate
+    // Step 2: Verify recipient address before sending
+    logger.info("[Letter] Verifying recipient address", { letterId: validatedData.letterId });
+
+    const addressVerification = await lobService.verifyAddress(currentLetter.recipientAddress);
+
+    // Block sending if address is undeliverable
+    if (addressVerification.deliverability === "undeliverable") {
+      // Revert to draft status
+      newStatusHistory = addStatusHistory(currentLetter.statusHistory, "draft", actorId);
+      await letterRef.update({
+        status: "draft",
+        statusHistory: newStatusHistory,
+        addressVerification: {
+          deliverability: addressVerification.deliverability,
+          verifiedAt: FieldValue.serverTimestamp(),
+          error: "Address is undeliverable",
+        },
+      });
+
+      throw new AppError(
+        ErrorCode.VALIDATION_ERROR,
+        "Recipient address is undeliverable. Please update the address and try again.",
+        400
+      );
+    }
+
+    // Use corrected/standardized address from Lob for better deliverability
+    const correctedAddress: MailingAddress = {
+      name: currentLetter.recipientAddress.name,
+      addressLine1: addressVerification.primary_line,
+      addressLine2: addressVerification.secondary_line || undefined,
+      city: addressVerification.components.city,
+      state: addressVerification.components.state,
+      zipCode: addressVerification.components.zip_code_plus_4
+        ? `${addressVerification.components.zip_code}-${addressVerification.components.zip_code_plus_4}`
+        : addressVerification.components.zip_code,
+    };
+
+    // Store verification result and corrected address
+    await letterRef.update({
+      addressVerification: {
+        deliverability: addressVerification.deliverability,
+        verifiedAt: FieldValue.serverTimestamp(),
+        originalAddress: currentLetter.recipientAddress,
+        correctedAddress: correctedAddress,
+      },
+      // Update recipient address with corrected version
+      recipientAddress: correctedAddress,
+    });
+
+    logger.info("[Letter] Address verified", {
+      letterId: validatedData.letterId,
+      deliverability: addressVerification.deliverability,
+      addressCorrected: JSON.stringify(currentLetter.recipientAddress) !== JSON.stringify(correctedAddress),
+    });
+
+    // Step 3: Calculate cost estimate
     const costEstimate = lobService.estimateCost(pdfResult.pageCount, mailType);
 
-    // Step 3: Send to Lob
+    // Step 4: Send to Lob
     logger.info("[Letter] Sending to Lob", {
       letterId: validatedData.letterId,
       mailType,
@@ -729,7 +785,7 @@ async function sendLetterHandler(
     });
 
     const lobLetter = await lobService.createLetter({
-      to: currentLetter.recipientAddress,
+      to: correctedAddress, // Use the corrected address
       from: currentLetter.returnAddress,
       file: pdfResult.signedUrl,
       fileType: "pdf",
@@ -743,7 +799,7 @@ async function sendLetterHandler(
       idempotencyKey: validatedData.idempotencyKey,
     });
 
-    // Step 4: Update letter with Lob info
+    // Step 5: Update letter with Lob info
     newStatusHistory = addStatusHistory(newStatusHistory, "queued", actorId);
 
     await letterRef.update({

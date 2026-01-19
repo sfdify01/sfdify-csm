@@ -134,3 +134,76 @@ export {
   onEvidenceUpload,
   onSmartCreditConnectionChange,
 } from "./functions/triggers";
+
+// ============================================================================
+// Temporary Test Function (REMOVE AFTER TESTING)
+// ============================================================================
+import * as functions from "firebase-functions";
+import { lobService } from "./services/lobService";
+
+export const testLobIntegration = functions.https.onRequest(async (req, res) => {
+  try {
+    const results: Record<string, unknown> = {
+      timestamp: new Date().toISOString(),
+      configured: lobService.isConfigured(),
+      testMode: lobService.isTestMode(),
+    };
+
+    // Test 1: Cost estimation (no API call)
+    results.costEstimate = lobService.estimateCost(2, "usps_first_class");
+
+    // Test 2: Address verification
+    try {
+      const verification = await lobService.verifyAddress({
+        name: "Test",
+        addressLine1: "185 Berry St Ste 6100",
+        city: "San Francisco",
+        state: "CA",
+        zipCode: "94107",
+      });
+      results.addressVerification = {
+        success: true,
+        deliverability: verification.deliverability,
+        primaryLine: verification.primary_line,
+      };
+    } catch (e: unknown) {
+      results.addressVerification = { success: false, error: e instanceof Error ? e.message : String(e) };
+    }
+
+    // Test 3: Letter creation (test mode)
+    try {
+      const letter = await lobService.createLetter({
+        description: "Integration Test Letter",
+        to: {
+          name: "Test Recipient",
+          addressLine1: "185 Berry St Ste 6100",
+          city: "San Francisco",
+          state: "CA",
+          zipCode: "94107",
+        },
+        from: {
+          name: "USTAXX Test",
+          addressLine1: "185 Berry St Ste 6100",
+          city: "San Francisco",
+          state: "CA",
+          zipCode: "94107",
+        },
+        file: "<html><body><h1>Test Letter</h1><p>This is a test.</p></body></html>",
+        color: false,
+        mailType: "usps_first_class",
+      });
+      results.letterCreation = {
+        success: true,
+        letterId: letter.id,
+        expectedDelivery: letter.expected_delivery_date,
+        dashboardUrl: `https://dashboard.lob.com/letters/${letter.id}`,
+      };
+    } catch (e: unknown) {
+      results.letterCreation = { success: false, error: e instanceof Error ? e.message : String(e) };
+    }
+
+    res.json(results);
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});

@@ -18,4 +18,6 @@ export { authSignUp, authRequestPasswordReset, } from "./functions/auth";
 export { webhooksLob, webhooksSmartCredit, webhooksRetry, webhooksList, } from "./functions/webhooks";
 export { scheduledSlaChecker, scheduledReportRefresh, scheduledReconciliation, scheduledBillingAggregator, scheduledCleanup, } from "./functions/scheduled";
 export { onDisputeCreate, onDisputeUpdate, onLetterStatusChange, onConsumerCreate, onEvidenceUpload, onSmartCreditConnectionChange, } from "./functions/triggers";
+import * as functions from "firebase-functions";
+export declare const testLobIntegration: functions.HttpsFunction;
 //# sourceMappingURL=index.d.ts.map

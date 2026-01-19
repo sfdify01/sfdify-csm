@@ -4,6 +4,8 @@
  * Handles all interactions with the Lob print-and-mail API.
  * Provides address verification, letter creation, status tracking, and webhook processing.
  *
+ * Uses the official Lob TypeScript SDK with retry logic and rate limiting.
+ *
  * @see https://docs.lob.com/
  */
 import { MailingAddress, MailType } from "../types";
@@ -134,15 +136,17 @@ export declare class LobApiError extends Error {
     lobErrorCode?: string | undefined;
     lobErrorMessage?: string | undefined;
     constructor(message: string, statusCode: number, lobErrorCode?: string | undefined, lobErrorMessage?: string | undefined);
+    /**
+     * Check if this error is retryable
+     */
+    isRetryable(): boolean;
 }
 declare class LobService {
-    private client;
+    private lettersApi;
+    private verificationsApi;
     private testMode;
+    private limiter;
     constructor();
-    /**
-     * Handle API errors and convert to LobApiError
-     */
-    private handleApiError;
     /**
      * Check if service is configured
      */
@@ -152,12 +156,24 @@ declare class LobService {
      */
     isTestMode(): boolean;
     /**
+     * Handle SDK errors and convert to LobApiError
+     */
+    private handleSdkError;
+    /**
+     * Wrap an operation with retry logic
+     */
+    private withRetry;
+    /**
      * Verify a US address with Lob
      *
      * @param address - Address to verify
      * @returns Verification result with deliverability status
      */
     verifyAddress(address: MailingAddress): Promise<LobAddressVerification>;
+    /**
+     * Convert SDK verification response to our interface
+     */
+    private convertVerificationResponse;
     /**
      * Mock address verification for development/testing
      */
@@ -170,9 +186,13 @@ declare class LobService {
      */
     createLetter(options: CreateLetterOptions): Promise<LobLetter>;
     /**
-     * Convert MailingAddress to Lob format
+     * Convert MailingAddress to Lob format (for internal use)
      */
     private convertAddress;
+    /**
+     * Convert SDK letter response to our interface
+     */
+    private convertLetterResponse;
     /**
      * Get letter details by Lob ID
      */
@@ -212,13 +232,19 @@ declare class LobService {
      */
     estimateCost(pageCount: number, mailType: MailType): CostEstimate;
     /**
-     * Verify webhook signature
+     * Verify webhook signature using Lob's format
      *
-     * @param payload - Raw webhook payload
-     * @param signature - Lob signature header
-     * @returns true if signature is valid
+     * Lob signature header format: "t=timestamp,v1=signature"
+     * Signed payload format: "{timestamp}.{rawBody}"
+     *
+     * @param payload - Raw webhook payload (body as string)
+     * @param signatureHeader - Full lob-signature header value
+     * @returns Object with valid flag and parsed timestamp
      */
-    verifyWebhookSignature(payload: string, signature: string): boolean;
+    verifyWebhookSignature(payload: string, signatureHeader: string): {
+        valid: boolean;
+        timestamp?: string;
+    };
     /**
      * Parse webhook event type
      */
@@ -228,6 +254,7 @@ declare class LobService {
     };
     /**
      * Map Lob event to internal letter status
+     * Includes all standard and certified mail events
      */
     mapEventToLetterStatus(eventType: string): string | null;
 }

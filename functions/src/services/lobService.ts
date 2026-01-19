@@ -4,10 +4,22 @@
  * Handles all interactions with the Lob print-and-mail API.
  * Provides address verification, letter creation, status tracking, and webhook processing.
  *
+ * Uses the official Lob TypeScript SDK with retry logic and rate limiting.
+ *
  * @see https://docs.lob.com/
  */
 
-import axios, { AxiosInstance, AxiosError } from "axios";
+import {
+  Configuration,
+  LettersApi,
+  UsVerificationsApi,
+  Letter as LobApiLetter,
+  UsVerification,
+  LetterList,
+  UsComponents,
+} from "@lob/lob-typescript-sdk";
+import Bottleneck from "bottleneck";
+import pRetry, { AbortError } from "p-retry";
 import { lobConfig } from "../config";
 import * as logger from "firebase-functions/logger";
 import { MailingAddress, MailType } from "../types";
@@ -155,6 +167,14 @@ export class LobApiError extends Error {
     super(message);
     this.name = "LobApiError";
   }
+
+  /**
+   * Check if this error is retryable
+   */
+  isRetryable(): boolean {
+    // Retry on server errors or rate limiting
+    return this.statusCode >= 500 || this.statusCode === 429;
+  }
 }
 
 // ============================================================================
@@ -162,60 +182,39 @@ export class LobApiError extends Error {
 // ============================================================================
 
 class LobService {
-  private client: AxiosInstance;
+  private lettersApi: LettersApi | null = null;
+  private verificationsApi: UsVerificationsApi | null = null;
   private testMode: boolean;
+  private limiter: Bottleneck;
 
   constructor() {
-    this.testMode = !lobConfig.apiKey.startsWith("live_");
+    this.testMode = !lobConfig.apiKey || !lobConfig.apiKey.startsWith("live_");
 
-    this.client = axios.create({
-      baseURL: lobConfig.baseUrl,
-      auth: {
+    // Initialize rate limiter
+    // Lob allows 150 requests per minute
+    this.limiter = new Bottleneck({
+      maxConcurrent: 10,
+      minTime: 400, // 150 requests/min = ~400ms between requests
+      reservoir: 150,
+      reservoirRefreshAmount: 150,
+      reservoirRefreshInterval: 60 * 1000, // 1 minute
+    });
+
+    // Initialize SDK if configured
+    if (this.isConfigured()) {
+      const config = new Configuration({
         username: lobConfig.apiKey,
-        password: "", // Lob uses API key as username with empty password
-      },
-      headers: {
-        "Content-Type": "application/json",
-        "Lob-Version": "2024-01-01",
-      },
-      timeout: 30000,
-    });
+      });
 
-    // Add response interceptor for error handling
-    this.client.interceptors.response.use(
-      (response) => response,
-      (error: AxiosError) => {
-        return this.handleApiError(error);
-      }
-    );
-  }
+      this.lettersApi = new LettersApi(config);
+      this.verificationsApi = new UsVerificationsApi(config);
 
-  /**
-   * Handle API errors and convert to LobApiError
-   */
-  private handleApiError(error: AxiosError): never {
-    const status = error.response?.status || 500;
-    const data = error.response?.data as Record<string, unknown> | undefined;
-
-    let message = "Lob API request failed";
-    let lobErrorCode: string | undefined;
-    let lobErrorMessage: string | undefined;
-
-    if (data?.error) {
-      const lobError = data.error as Record<string, unknown>;
-      lobErrorCode = lobError.code as string;
-      lobErrorMessage = lobError.message as string;
-      message = lobErrorMessage || message;
+      logger.info("[Lob Service] Initialized with SDK", {
+        testMode: this.testMode,
+      });
+    } else {
+      logger.warn("[Lob Service] API key not configured, running in mock mode");
     }
-
-    logger.error("[Lob Service] API Error", {
-      status,
-      code: lobErrorCode,
-      message: lobErrorMessage,
-      url: error.config?.url,
-    });
-
-    throw new LobApiError(message, status, lobErrorCode, lobErrorMessage);
   }
 
   /**
@@ -232,6 +231,73 @@ class LobService {
     return this.testMode;
   }
 
+  /**
+   * Handle SDK errors and convert to LobApiError
+   */
+  private handleSdkError(error: unknown, operation: string): never {
+    let statusCode = 500;
+    let lobErrorCode: string | undefined;
+    let lobErrorMessage: string | undefined;
+    let message = `Lob API ${operation} failed`;
+
+    if (error instanceof Error) {
+      // Check if it's an Axios error from the SDK
+      const axiosError = error as { response?: { status?: number; data?: { error?: { code?: string; message?: string } } } };
+      if (axiosError.response) {
+        statusCode = axiosError.response.status || 500;
+        if (axiosError.response.data?.error) {
+          lobErrorCode = axiosError.response.data.error.code;
+          lobErrorMessage = axiosError.response.data.error.message;
+          message = lobErrorMessage || message;
+        }
+      }
+    }
+
+    logger.error(`[Lob Service] ${operation} Error`, {
+      statusCode,
+      code: lobErrorCode,
+      message: lobErrorMessage,
+    });
+
+    throw new LobApiError(message, statusCode, lobErrorCode, lobErrorMessage);
+  }
+
+  /**
+   * Wrap an operation with retry logic
+   */
+  private async withRetry<T>(
+    operation: () => Promise<T>,
+    operationName: string
+  ): Promise<T> {
+    return pRetry(
+      async () => {
+        try {
+          return await operation();
+        } catch (error) {
+          // Convert to our error type for proper retry checking
+          if (error instanceof LobApiError) {
+            if (!error.isRetryable()) {
+              throw new AbortError(error.message);
+            }
+            throw error;
+          }
+          throw error;
+        }
+      },
+      {
+        retries: 3,
+        minTimeout: 1000,
+        maxTimeout: 10000,
+        factor: 2,
+        onFailedAttempt: (attemptError) => {
+          logger.warn(`[Lob Service] ${operationName} attempt ${attemptError.attemptNumber} failed`, {
+            retriesLeft: attemptError.retriesLeft,
+          });
+        },
+      }
+    );
+  }
+
   // ==========================================================================
   // Address Verification
   // ==========================================================================
@@ -243,26 +309,86 @@ class LobService {
    * @returns Verification result with deliverability status
    */
   async verifyAddress(address: MailingAddress): Promise<LobAddressVerification> {
-    if (!this.isConfigured()) {
+    if (!this.isConfigured() || !this.verificationsApi) {
       logger.warn("[Lob Service] API not configured, returning mock verification");
       return this.mockAddressVerification(address);
     }
 
-    const response = await this.client.post<LobAddressVerification>("/us_verifications", {
-      primary_line: address.addressLine1,
-      secondary_line: address.addressLine2 || "",
-      city: address.city,
-      state: address.state,
-      zip_code: address.zipCode,
-    });
+    return this.limiter.schedule(() =>
+      this.withRetry(async () => {
+        try {
+          // Build verification request - use any to bypass SDK's strict type requirements
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const verificationRequest: any = {
+            primary_line: address.addressLine1,
+            secondary_line: address.addressLine2 || "",
+            city: address.city,
+            state: address.state,
+            zip_code: address.zipCode,
+          };
 
-    logger.info("[Lob Service] Address verified", {
-      deliverability: response.data.deliverability,
-      city: response.data.components.city,
-      state: response.data.components.state,
-    });
+          const response = await this.verificationsApi!.verifySingle(verificationRequest);
 
-    return response.data;
+          logger.info("[Lob Service] Address verified", {
+            deliverability: response.deliverability,
+            city: response.components?.city,
+            state: response.components?.state,
+          });
+
+          // Convert SDK response to our interface
+          return this.convertVerificationResponse(response, address);
+        } catch (error) {
+          this.handleSdkError(error, "verifyAddress");
+        }
+      }, "verifyAddress")
+    );
+  }
+
+  /**
+   * Convert SDK verification response to our interface
+   */
+  private convertVerificationResponse(
+    sdkResponse: UsVerification,
+    originalAddress: MailingAddress
+  ): LobAddressVerification {
+    const components = sdkResponse.components as UsComponents | undefined;
+    return {
+      id: sdkResponse.id || `us_ver_${Date.now()}`,
+      recipient: originalAddress.name,
+      primary_line: sdkResponse.primary_line || originalAddress.addressLine1,
+      secondary_line: sdkResponse.secondary_line || undefined,
+      last_line: sdkResponse.last_line || `${originalAddress.city}, ${originalAddress.state} ${originalAddress.zipCode}`,
+      deliverability: (sdkResponse.deliverability as LobAddressVerification["deliverability"]) || "undeliverable",
+      components: {
+        primary_number: components?.primary_number || "",
+        street_predirection: components?.street_predirection || "",
+        street_name: components?.street_name || "",
+        street_suffix: components?.street_suffix || "",
+        street_postdirection: components?.street_postdirection || "",
+        secondary_designator: components?.secondary_designator || "",
+        secondary_number: components?.secondary_number || "",
+        pmb_designator: components?.pmb_designator || "",
+        pmb_number: components?.pmb_number || "",
+        extra_secondary_designator: components?.extra_secondary_designator || "",
+        extra_secondary_number: components?.extra_secondary_number || "",
+        city: components?.city || originalAddress.city,
+        state: components?.state || originalAddress.state,
+        zip_code: components?.zip_code || originalAddress.zipCode.substring(0, 5),
+        zip_code_plus_4: components?.zip_code_plus_4 || "",
+        zip_code_type: (components?.zip_code_type as string) || "standard",
+        delivery_point_barcode: components?.delivery_point_barcode || "",
+        address_type: (components?.address_type as string) || "residential",
+        record_type: (components?.record_type as string) || "street",
+        default_building_address: components?.default_building_address || false,
+        county: components?.county || "",
+        county_fips: components?.county_fips || "",
+        carrier_route: components?.carrier_route || "",
+        carrier_route_type: (components?.carrier_route_type as string) || "",
+        latitude: components?.latitude || 0,
+        longitude: components?.longitude || 0,
+      },
+      object: "us_verification",
+    };
   }
 
   /**
@@ -319,72 +445,90 @@ class LobService {
    * @returns Created letter object
    */
   async createLetter(options: CreateLetterOptions): Promise<LobLetter> {
-    if (!this.isConfigured()) {
+    if (!this.isConfigured() || !this.lettersApi) {
       logger.warn("[Lob Service] API not configured, returning mock letter");
       return this.mockLetter(options);
     }
 
-    // Convert MailType to Lob format
-    const mailType = options.mailType === "usps_first_class" ? "usps_first_class" : "usps_standard";
-    let extraService: "certified" | "certified_return_receipt" | undefined;
+    return this.limiter.schedule(() =>
+      this.withRetry(async () => {
+        try {
+          // Convert MailType to Lob format
+          const mailType = options.mailType === "usps_first_class" ? "usps_first_class" : "usps_standard";
+          let extraService: string | undefined;
+          if (options.mailType === "usps_certified") {
+            extraService = "certified";
+          } else if (options.mailType === "usps_certified_return_receipt") {
+            extraService = "certified_return_receipt";
+          }
 
-    if (options.mailType === "usps_certified") {
-      extraService = "certified";
-    } else if (options.mailType === "usps_certified_return_receipt") {
-      extraService = "certified_return_receipt";
-    }
+          // Build address objects - use any to bypass SDK's strict toJSON requirement
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const toAddress: any = {
+            name: options.to.name,
+            address_line1: options.to.addressLine1,
+            address_line2: options.to.addressLine2,
+            address_city: options.to.city,
+            address_state: options.to.state,
+            address_zip: options.to.zipCode,
+            address_country: "US",
+          };
 
-    // Build request data
-    const requestData: Record<string, unknown> = {
-      description: options.description || "Credit Dispute Letter",
-      to: this.convertAddress(options.to),
-      from: this.convertAddress(options.from),
-      mail_type: mailType,
-      color: options.color ?? false,
-      double_sided: options.doubleSided ?? false,
-      metadata: options.metadata || {},
-    };
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const fromAddress: any = {
+            name: options.from.name,
+            address_line1: options.from.addressLine1,
+            address_line2: options.from.addressLine2,
+            address_city: options.from.city,
+            address_state: options.from.state,
+            address_zip: options.from.zipCode,
+            address_country: "US",
+          };
 
-    // Handle file - either URL or inline content
-    if (typeof options.file === "string") {
-      if (options.file.startsWith("http") || options.file.startsWith("https")) {
-        requestData.file = options.file;
-      } else {
-        // Assume it's HTML content
-        requestData.file = options.file;
-      }
-    } else {
-      // Buffer - convert to base64 for Lob API
-      requestData.file = options.file.toString("base64");
-    }
+          // Build request data - use any to bypass SDK's strict toJSON requirement
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const letterEditable: any = {
+            description: options.description || "Credit Dispute Letter",
+            to: toAddress,
+            from: fromAddress,
+            mail_type: mailType,
+            color: options.color ?? false,
+            double_sided: options.doubleSided ?? false,
+            use_type: "operational", // Required by Lob - "operational" for transactional mail
+            metadata: options.metadata || {},
+            file: typeof options.file === "string" ? options.file : options.file.toString("base64"),
+          };
 
-    if (extraService) {
-      requestData.extra_service = extraService;
-    }
+          if (extraService) {
+            letterEditable.extra_service = extraService;
+          }
 
-    if (options.sendDate) {
-      requestData.send_date = options.sendDate;
-    }
+          if (options.sendDate) {
+            letterEditable.send_date = options.sendDate;
+          }
 
-    // Set idempotency key in header if provided
-    const headers: Record<string, string> = {};
-    if (options.idempotencyKey) {
-      headers["Idempotency-Key"] = options.idempotencyKey;
-    }
+          // Create letter using SDK
+          const response = await this.lettersApi!.create(
+            letterEditable,
+            options.idempotencyKey
+          );
 
-    const response = await this.client.post<LobLetter>("/letters", requestData, { headers });
+          logger.info("[Lob Service] Letter created", {
+            letterId: response.id,
+            expectedDelivery: response.expected_delivery_date,
+            carrier: response.carrier,
+          });
 
-    logger.info("[Lob Service] Letter created", {
-      letterId: response.data.id,
-      expectedDelivery: response.data.expected_delivery_date,
-      carrier: response.data.carrier,
-    });
-
-    return response.data;
+          return this.convertLetterResponse(response, options);
+        } catch (error) {
+          this.handleSdkError(error, "createLetter");
+        }
+      }, "createLetter")
+    );
   }
 
   /**
-   * Convert MailingAddress to Lob format
+   * Convert MailingAddress to Lob format (for internal use)
    */
   private convertAddress(address: MailingAddress): LobAddress {
     return {
@@ -399,28 +543,146 @@ class LobService {
   }
 
   /**
+   * Convert SDK letter response to our interface
+   */
+  private convertLetterResponse(sdkLetter: LobApiLetter, options: CreateLetterOptions): LobLetter {
+    const tracking_events: LobTrackingEvent[] = [];
+    if (sdkLetter.tracking_events) {
+      for (const event of sdkLetter.tracking_events) {
+        // Type assertion needed because SDK types may be incomplete
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const eventAny = event as any;
+        const formatEventDate = (val: unknown): string => {
+          if (!val) return "";
+          if (typeof val === "string") return val;
+          if (val instanceof Date) return val.toISOString();
+          return String(val);
+        };
+
+        tracking_events.push({
+          id: (eventAny.id as string) || "",
+          type: (eventAny.type as string) || "",
+          name: (eventAny.name as string) || "",
+          location: (eventAny.location as string) || undefined,
+          time: formatEventDate(eventAny.time),
+          date_created: formatEventDate(eventAny.date_created),
+          date_modified: formatEventDate(eventAny.date_modified),
+          object: "tracking_event",
+        });
+      }
+    }
+
+    // Handle date fields - they may be strings or Date objects
+    const formatDate = (val: string | Date | undefined | null): string => {
+      if (!val) return "";
+      if (typeof val === "string") return val.split("T")[0];
+      return val.toISOString().split("T")[0];
+    };
+
+    const formatDateTime = (val: string | Date | undefined | null): string => {
+      if (!val) return "";
+      if (typeof val === "string") return val;
+      return val.toISOString();
+    };
+
+    return {
+      id: sdkLetter.id || "",
+      description: sdkLetter.description || undefined,
+      metadata: (sdkLetter.metadata as Record<string, string>) || {},
+      mail_type: (sdkLetter.mail_type as "usps_first_class" | "usps_standard") || "usps_first_class",
+      expected_delivery_date: formatDate(sdkLetter.expected_delivery_date),
+      date_created: formatDateTime(sdkLetter.date_created),
+      date_modified: formatDateTime(sdkLetter.date_modified),
+      send_date: formatDate(sdkLetter.send_date),
+      to: this.convertAddress(options.to),
+      from: this.convertAddress(options.from),
+      color: sdkLetter.color || false,
+      double_sided: sdkLetter.double_sided || false,
+      address_placement: (sdkLetter.address_placement as string) || "top_first_page",
+      return_envelope: typeof sdkLetter.return_envelope === "boolean" ? sdkLetter.return_envelope : false,
+      perforated_page: sdkLetter.perforated_page ?? undefined,
+      custom_envelope: sdkLetter.custom_envelope?.id || undefined,
+      extra_service: sdkLetter.extra_service as "certified" | "certified_return_receipt" | "registered" | undefined,
+      carrier: sdkLetter.carrier || "USPS",
+      tracking_number: sdkLetter.tracking_number || undefined,
+      tracking_events,
+      url: sdkLetter.url || "",
+      thumbnails: sdkLetter.thumbnails
+        ? {
+            small: sdkLetter.thumbnails[0]?.small || "",
+            medium: sdkLetter.thumbnails[0]?.medium || "",
+            large: sdkLetter.thumbnails[0]?.large || "",
+          }
+        : { small: "", medium: "", large: "" },
+      object: "letter",
+    };
+  }
+
+  /**
    * Get letter details by Lob ID
    */
   async getLetter(lobId: string): Promise<LobLetter> {
-    if (!this.isConfigured()) {
+    if (!this.isConfigured() || !this.lettersApi) {
       throw new LobApiError("Lob API not configured", 500);
     }
 
-    const response = await this.client.get<LobLetter>(`/letters/${lobId}`);
-    return response.data;
+    return this.limiter.schedule(() =>
+      this.withRetry(async () => {
+        try {
+          const response = await this.lettersApi!.get(lobId);
+
+          // We need to construct the options for the converter from the response
+          const toAddr = response.to as { name?: string; address_line1?: string; address_line2?: string; address_city?: string; address_state?: string; address_zip?: string };
+          const fromAddr = response.from as { name?: string; address_line1?: string; address_line2?: string; address_city?: string; address_state?: string; address_zip?: string };
+
+          const options: CreateLetterOptions = {
+            to: {
+              name: toAddr?.name || "",
+              addressLine1: toAddr?.address_line1 || "",
+              addressLine2: toAddr?.address_line2,
+              city: toAddr?.address_city || "",
+              state: toAddr?.address_state || "",
+              zipCode: toAddr?.address_zip || "",
+            },
+            from: {
+              name: fromAddr?.name || "",
+              addressLine1: fromAddr?.address_line1 || "",
+              addressLine2: fromAddr?.address_line2,
+              city: fromAddr?.address_city || "",
+              state: fromAddr?.address_state || "",
+              zipCode: fromAddr?.address_zip || "",
+            },
+            file: "",
+            mailType: response.mail_type as MailType,
+          };
+
+          return this.convertLetterResponse(response, options);
+        } catch (error) {
+          this.handleSdkError(error, "getLetter");
+        }
+      }, "getLetter")
+    );
   }
 
   /**
    * Cancel a letter (only if not yet sent)
    */
   async cancelLetter(lobId: string): Promise<void> {
-    if (!this.isConfigured()) {
+    if (!this.isConfigured() || !this.lettersApi) {
       logger.warn("[Lob Service] API not configured, skipping cancel");
       return;
     }
 
-    await this.client.delete(`/letters/${lobId}`);
-    logger.info("[Lob Service] Letter cancelled", { lobId });
+    await this.limiter.schedule(() =>
+      this.withRetry(async () => {
+        try {
+          await this.lettersApi!.cancel(lobId);
+          logger.info("[Lob Service] Letter cancelled", { lobId });
+        } catch (error) {
+          this.handleSdkError(error, "cancelLetter");
+        }
+      }, "cancelLetter")
+    );
   }
 
   /**
@@ -433,24 +695,64 @@ class LobService {
     dateCreated?: { gt?: string; gte?: string; lt?: string; lte?: string };
     metadata?: Record<string, string>;
   } = {}): Promise<{ data: LobLetter[]; total_count: number }> {
-    if (!this.isConfigured()) {
+    if (!this.isConfigured() || !this.lettersApi) {
       return { data: [], total_count: 0 };
     }
 
-    const params = new URLSearchParams();
-    if (options.limit) params.set("limit", String(options.limit));
-    if (options.afterId) params.set("after", options.afterId);
-    if (options.beforeId) params.set("before", options.beforeId);
-    if (options.metadata) {
-      for (const [key, value] of Object.entries(options.metadata)) {
-        params.set(`metadata[${key}]`, value);
-      }
-    }
+    return this.limiter.schedule(() =>
+      this.withRetry(async () => {
+        try {
+          const response = await this.lettersApi!.list(
+            options.limit,
+            options.beforeId,
+            options.afterId,
+            undefined, // include
+            options.dateCreated,
+            options.metadata
+          );
 
-    const response = await this.client.get<{ data: LobLetter[]; total_count: number }>(
-      `/letters?${params.toString()}`
+          const listResponse = response as LetterList;
+
+          // Convert each letter
+          const letters: LobLetter[] = [];
+          if (listResponse.data) {
+            for (const letter of listResponse.data) {
+              const toAddr = letter.to as { name?: string; address_line1?: string; address_line2?: string; address_city?: string; address_state?: string; address_zip?: string };
+              const fromAddr = letter.from as { name?: string; address_line1?: string; address_line2?: string; address_city?: string; address_state?: string; address_zip?: string };
+
+              const convertedOptions: CreateLetterOptions = {
+                to: {
+                  name: toAddr?.name || "",
+                  addressLine1: toAddr?.address_line1 || "",
+                  addressLine2: toAddr?.address_line2,
+                  city: toAddr?.address_city || "",
+                  state: toAddr?.address_state || "",
+                  zipCode: toAddr?.address_zip || "",
+                },
+                from: {
+                  name: fromAddr?.name || "",
+                  addressLine1: fromAddr?.address_line1 || "",
+                  addressLine2: fromAddr?.address_line2,
+                  city: fromAddr?.address_city || "",
+                  state: fromAddr?.address_state || "",
+                  zipCode: fromAddr?.address_zip || "",
+                },
+                file: "",
+                mailType: letter.mail_type as MailType,
+              };
+              letters.push(this.convertLetterResponse(letter, convertedOptions));
+            }
+          }
+
+          return {
+            data: letters,
+            total_count: listResponse.total_count || 0,
+          };
+        } catch (error) {
+          this.handleSdkError(error, "listLetters");
+        }
+      }, "listLetters")
     );
-    return response.data;
   }
 
   /**
@@ -552,28 +854,82 @@ class LobService {
   // ==========================================================================
 
   /**
-   * Verify webhook signature
+   * Verify webhook signature using Lob's format
    *
-   * @param payload - Raw webhook payload
-   * @param signature - Lob signature header
-   * @returns true if signature is valid
+   * Lob signature header format: "t=timestamp,v1=signature"
+   * Signed payload format: "{timestamp}.{rawBody}"
+   *
+   * @param payload - Raw webhook payload (body as string)
+   * @param signatureHeader - Full lob-signature header value
+   * @returns Object with valid flag and parsed timestamp
    */
-  verifyWebhookSignature(payload: string, signature: string): boolean {
+  verifyWebhookSignature(
+    payload: string,
+    signatureHeader: string
+  ): { valid: boolean; timestamp?: string } {
     if (!lobConfig.webhookSecret) {
       logger.warn("[Lob Service] Webhook secret not configured, skipping verification");
-      return true;
+      return { valid: true };
     }
 
-    const crypto = require("crypto");
-    const expectedSignature = crypto
-      .createHmac("sha256", lobConfig.webhookSecret)
-      .update(payload)
-      .digest("hex");
+    try {
+      // Parse header: "t=1234567890,v1=abc123def456..."
+      const parts = signatureHeader.split(",");
+      const timestampPart = parts.find((p) => p.startsWith("t="));
+      const signaturePart = parts.find((p) => p.startsWith("v1="));
 
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature)
-    );
+      if (!timestampPart || !signaturePart) {
+        logger.warn("[Lob Service] Invalid signature header format", {
+          hasTimestamp: !!timestampPart,
+          hasSignature: !!signaturePart,
+        });
+        return { valid: false };
+      }
+
+      const timestamp = timestampPart.substring(2);
+      const signature = signaturePart.substring(3);
+
+      // Compute expected signature
+      const crypto = require("crypto");
+      const signedPayload = `${timestamp}.${payload}`;
+      const expectedSignature = crypto
+        .createHmac("sha256", lobConfig.webhookSecret)
+        .update(signedPayload)
+        .digest("hex");
+
+      // Timing-safe comparison
+      const signatureBuffer = Buffer.from(signature);
+      const expectedBuffer = Buffer.from(expectedSignature);
+
+      // Buffers must be same length for timingSafeEqual
+      if (signatureBuffer.length !== expectedBuffer.length) {
+        return { valid: false, timestamp };
+      }
+
+      const signatureValid = crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
+
+      // Check timestamp freshness (prevent replay attacks)
+      const timestampMs = parseInt(timestamp) * 1000;
+      const age = Date.now() - timestampMs;
+      const maxAge = 5 * 60 * 1000; // 5 minutes
+      const isFresh = age >= 0 && age < maxAge;
+
+      if (!isFresh) {
+        logger.warn("[Lob Service] Webhook signature timestamp too old or in future", {
+          timestamp,
+          ageMs: age,
+          maxAgeMs: maxAge,
+        });
+      }
+
+      return {
+        valid: signatureValid && isFresh,
+        timestamp,
+      };
+    } catch (error) {
+      logger.error("[Lob Service] Error verifying webhook signature", { error });
+      return { valid: false };
+    }
   }
 
   /**
@@ -592,9 +948,11 @@ class LobService {
 
   /**
    * Map Lob event to internal letter status
+   * Includes all standard and certified mail events
    */
   mapEventToLetterStatus(eventType: string): string | null {
     const eventMap: Record<string, string> = {
+      // Standard letter events
       "letter.created": "queued",
       "letter.rendered_pdf": "ready",
       "letter.rendered_thumbnails": "ready",
@@ -603,9 +961,21 @@ class LobService {
       "letter.in_transit": "in_transit",
       "letter.in_local_area": "in_transit",
       "letter.processed_for_delivery": "in_transit",
-      "letter.delivered": "delivered",
       "letter.re-routed": "in_transit",
       "letter.returned_to_sender": "returned_to_sender",
+      "letter.delivered": "delivered",
+      "letter.failed": "returned_to_sender",
+
+      // Certified mail events
+      "letter.certified.mailed": "sent",
+      "letter.certified.in_transit": "in_transit",
+      "letter.certified.in_local_area": "in_transit",
+      "letter.certified.processed_for_delivery": "in_transit",
+      "letter.certified.re-routed": "in_transit",
+      "letter.certified.returned_to_sender": "returned_to_sender",
+      "letter.certified.delivered": "delivered",
+      "letter.certified.pickup_available": "in_transit",
+      "letter.certified.issue": "returned_to_sender",
     };
 
     return eventMap[eventType] || null;

@@ -76,17 +76,72 @@ exports.LOB_EVENT_TYPES = {
 // ============================================================================
 /**
  * Verify Lob webhook signature
- * Lob uses a timestamp + payload signature scheme
+ *
+ * Lob signature header format: "t=timestamp,v1=signature"
+ * Signed payload format: "{timestamp}.{rawBody}"
+ *
+ * @param payload - Raw webhook payload (body as string)
+ * @param signatureHeader - Full lob-signature header value (format: "t=timestamp,v1=signature")
+ * @returns Object with valid flag and parsed timestamp
  */
-function verifyLobSignature(payload, signature, timestamp) {
+function verifyLobSignature(payload, signatureHeader) {
     if (!config_1.lobConfig.webhookSecret) {
-        return false;
+        functions.logger.warn("[Webhook] Lob webhook secret not configured");
+        return { valid: false };
     }
-    const expectedSignature = crypto
-        .createHmac("sha256", config_1.lobConfig.webhookSecret)
-        .update(`${timestamp}.${payload}`)
-        .digest("hex");
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
+    if (!signatureHeader) {
+        functions.logger.warn("[Webhook] Missing lob-signature header");
+        return { valid: false };
+    }
+    try {
+        // Parse header: "t=1234567890,v1=abc123def456..."
+        const parts = signatureHeader.split(",");
+        const timestampPart = parts.find((p) => p.startsWith("t="));
+        const signaturePart = parts.find((p) => p.startsWith("v1="));
+        if (!timestampPart || !signaturePart) {
+            functions.logger.warn("[Webhook] Invalid lob-signature header format", {
+                hasTimestamp: !!timestampPart,
+                hasSignature: !!signaturePart,
+            });
+            return { valid: false };
+        }
+        const timestamp = timestampPart.substring(2);
+        const signature = signaturePart.substring(3);
+        // Compute expected signature using {timestamp}.{payload}
+        const signedPayload = `${timestamp}.${payload}`;
+        const expectedSignature = crypto
+            .createHmac("sha256", config_1.lobConfig.webhookSecret)
+            .update(signedPayload)
+            .digest("hex");
+        // Timing-safe comparison (must have same length)
+        const signatureBuffer = Buffer.from(signature);
+        const expectedBuffer = Buffer.from(expectedSignature);
+        if (signatureBuffer.length !== expectedBuffer.length) {
+            functions.logger.warn("[Webhook] Signature length mismatch");
+            return { valid: false, timestamp };
+        }
+        const signatureValid = crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
+        // Check timestamp freshness to prevent replay attacks (5 minute window)
+        const timestampMs = parseInt(timestamp) * 1000;
+        const age = Date.now() - timestampMs;
+        const maxAge = 5 * 60 * 1000; // 5 minutes
+        const isFresh = age >= 0 && age < maxAge;
+        if (!isFresh) {
+            functions.logger.warn("[Webhook] Lob signature timestamp too old or in future", {
+                timestamp,
+                ageMs: age,
+                maxAgeMs: maxAge,
+            });
+        }
+        return {
+            valid: signatureValid && isFresh,
+            timestamp,
+        };
+    }
+    catch (error) {
+        functions.logger.error("[Webhook] Error verifying Lob signature", { error });
+        return { valid: false };
+    }
 }
 /**
  * Verify SmartCredit webhook signature
@@ -103,18 +158,32 @@ function verifySmartCreditSignature(payload, signature) {
 }
 /**
  * Map Lob event type to internal letter status
+ * Complete mapping for all standard and certified mail events
  */
 function mapLobEventToStatus(eventType) {
     const statusMap = {
+        // Standard letter events
         "letter.created": "queued",
         "letter.rendered_pdf": "ready",
+        "letter.rendered_thumbnails": "ready",
+        "letter.deleted": "cancelled", // Note: cancelled may not be in LetterStatus type
+        "letter.mailed": "sent",
+        "letter.in_transit": "in_transit",
+        "letter.in_local_area": "in_transit",
+        "letter.processed_for_delivery": "in_transit",
+        "letter.re-routed": "in_transit",
+        "letter.returned_to_sender": "returned_to_sender",
+        "letter.delivered": "delivered",
+        "letter.failed": "returned_to_sender",
+        // Certified mail events
         "letter.certified.mailed": "sent",
         "letter.certified.in_transit": "in_transit",
-        "letter.certified.delivered": "delivered",
-        "letter.delivered": "delivered",
-        "letter.returned_to_sender": "returned_to_sender",
+        "letter.certified.in_local_area": "in_transit",
+        "letter.certified.processed_for_delivery": "in_transit",
+        "letter.certified.re-routed": "in_transit",
         "letter.certified.returned_to_sender": "returned_to_sender",
-        "letter.failed": "returned_to_sender",
+        "letter.certified.delivered": "delivered",
+        "letter.certified.pickup_available": "in_transit",
         "letter.certified.issue": "returned_to_sender",
     };
     return statusMap[eventType] || null;
@@ -156,15 +225,15 @@ exports.webhooksLob = functions.https.onRequest(async (req, res) => {
         return;
     }
     try {
-        // Get signature headers
-        const lobSignature = req.headers["lob-signature"];
-        const lobTimestamp = req.headers["lob-signature-timestamp"];
+        // Get the lob-signature header (format: "t=timestamp,v1=signature")
+        const lobSignatureHeader = req.headers["lob-signature"];
         const rawBody = JSON.stringify(req.body);
         const payload = req.body;
         // Verify signature if webhook secret is configured
         let signatureValid = true;
-        if (config_1.lobConfig.webhookSecret && lobSignature && lobTimestamp) {
-            signatureValid = verifyLobSignature(rawBody, lobSignature, lobTimestamp);
+        if (config_1.lobConfig.webhookSecret) {
+            const verificationResult = verifyLobSignature(rawBody, lobSignatureHeader);
+            signatureValid = verificationResult.valid;
         }
         // Extract event information
         const eventType = payload.event_type?.id || "unknown";
@@ -188,7 +257,7 @@ exports.webhooksLob = functions.https.onRequest(async (req, res) => {
             }
         }
         // Store webhook event
-        const webhookEventId = await storeWebhookEvent("lob", eventType, resourceType, resourceId, payload, lobSignature || "", signatureValid, tenantId, internalLetterId);
+        const webhookEventId = await storeWebhookEvent("lob", eventType, resourceType, resourceId, payload, lobSignatureHeader || "", signatureValid, tenantId, internalLetterId);
         // If signature is invalid, stop processing
         if (!signatureValid) {
             functions.logger.warn("Invalid Lob webhook signature", {

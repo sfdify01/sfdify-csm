@@ -160,14 +160,50 @@ firebase functions:log --project=ustaxx-csm
 After deployment, you'll need to register webhook URLs with external services:
 
 #### Lob Webhooks
-- Dashboard: https://dashboard.lob.com/#/settings/webhooks
-- Webhook URL: `https://us-central1-ustaxx-csm.cloudfunctions.net/webhooksLob`
-- Events to subscribe:
-  - `letter.created`
-  - `letter.in_transit`
-  - `letter.in_local_area`
-  - `letter.delivered`
-  - `letter.failed`
+
+**Dashboard:** https://dashboard.lob.com/webhooks
+
+**Webhook Configuration:**
+1. Click "Create Webhook"
+2. Enter Webhook URL: `https://us-central1-ustaxx-csm.cloudfunctions.net/webhooksLob`
+3. Select API version: `2024-01-01`
+4. Subscribe to the following events:
+
+**Standard Letter Events (Required):**
+- `letter.created` - Letter created in Lob system
+- `letter.rendered_pdf` - PDF rendered and ready
+- `letter.rendered_thumbnails` - Thumbnails generated
+- `letter.mailed` - Letter mailed by USPS
+- `letter.in_transit` - Letter in transit
+- `letter.in_local_area` - Letter in local delivery area
+- `letter.processed_for_delivery` - Letter processed for delivery
+- `letter.re-routed` - Letter re-routed
+- `letter.delivered` - Letter delivered
+- `letter.returned_to_sender` - Letter returned to sender
+- `letter.failed` - Letter delivery failed
+
+**Certified Mail Events (Required for certified letters):**
+- `letter.certified.mailed` - Certified letter mailed
+- `letter.certified.in_transit` - Certified letter in transit
+- `letter.certified.in_local_area` - Certified letter in local area
+- `letter.certified.processed_for_delivery` - Certified letter processed
+- `letter.certified.re-routed` - Certified letter re-routed
+- `letter.certified.delivered` - Certified letter delivered
+- `letter.certified.returned_to_sender` - Certified letter returned
+- `letter.certified.pickup_available` - Certified letter available for pickup
+- `letter.certified.issue` - Certified letter has an issue
+
+5. Copy the **Webhook Secret** from the webhook settings
+6. Store the secret in Firebase:
+   ```bash
+   firebase functions:secrets:set LOB_WEBHOOK_SECRET
+   # Paste the webhook secret when prompted
+   ```
+
+**Webhook Signature Verification:**
+- Lob uses HMAC-SHA256 signature verification
+- Header format: `lob-signature: t=timestamp,v1=signature`
+- The system validates both signature and timestamp freshness (5 minute window)
 
 #### SmartCredit Webhooks
 - Contact SmartCredit support to register webhook
@@ -200,6 +236,39 @@ After deployment, you'll need to register webhook URLs with external services:
 # Test evidence upload
 # Test scheduled functions (check logs)
 ```
+
+#### Testing Lob Integration
+
+1. **Test Address Verification:**
+   ```bash
+   firebase functions:shell
+   > lobService.verifyAddress({name: "Test", addressLine1: "1600 Pennsylvania Ave", city: "Washington", state: "DC", zipCode: "20500"})
+   ```
+   - Expected: Returns deliverability status and standardized address
+
+2. **Test Letter Creation (Test Mode):**
+   - Create a dispute in the frontend
+   - Generate and approve a letter
+   - Send the letter (uses test API key)
+   - Verify letter appears in Lob Dashboard: https://dashboard.lob.com/letters
+
+3. **Test Webhook Processing:**
+   - In Lob Dashboard, go to Webhooks
+   - Use "Send Test Webhook" feature
+   - Check Firebase logs:
+     ```bash
+     firebase functions:log --only webhooksLob
+     ```
+   - Verify webhook was received and processed
+
+4. **Verify Address Verification Enforcement:**
+   - Try sending a letter with an invalid address
+   - Expected: Error message "Recipient address is undeliverable"
+
+5. **End-to-End Flow:**
+   - Create dispute → Generate letter → Approve → Send
+   - Monitor Firestore for status updates: queued → sent → delivered
+   - Verify webhook events are received and processed
 
 ### 4. Configure Firestore Security Rules
 
