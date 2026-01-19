@@ -483,10 +483,15 @@ async function listConsumersHandler(
   data: ListConsumersInput,
   context: RequestContext
 ): Promise<PaginatedResponse<Consumer>> {
+  logger.info("[consumersList] Handler started", { data });
   const { tenantId } = context;
+  logger.info("[consumersList] TenantId extracted", { tenantId });
 
   // Validate input
+  logger.info("[consumersList] Validating pagination");
   const pagination = validate(paginationSchema, data);
+  logger.info("[consumersList] Pagination validated", { pagination });
+  logger.info("[consumersList] Validating filters");
   const filters = validate(
     Joi.object({
       search: Joi.string().max(100),
@@ -494,12 +499,15 @@ async function listConsumersHandler(
     }),
     data
   );
+  logger.info("[consumersList] Filters validated", { filters });
 
   // Build query
+  logger.info("[consumersList] Building Firestore query");
   let query = db
     .collection("consumers")
     .where("tenantId", "==", tenantId)
     .orderBy("createdAt", "desc");
+  logger.info("[consumersList] Base query built");
 
   // Filter by KYC status if specified
   if (filters.kycStatus) {
@@ -515,30 +523,39 @@ async function listConsumersHandler(
   }
 
   // Execute query with limit + 1 to check for more
+  logger.info("[consumersList] Executing query with limit", { limit: pagination.limit + 1 });
   const snapshot = await query.limit(pagination.limit + 1).get();
+  logger.info("[consumersList] Query executed", { docCount: snapshot.docs.length });
 
   const hasMore = snapshot.docs.length > pagination.limit;
   const docs = hasMore ? snapshot.docs.slice(0, -1) : snapshot.docs;
+  logger.info("[consumersList] Docs processed", { hasMore, processedCount: docs.length });
 
   // Map and mask consumers
+  logger.info("[consumersList] Mapping and masking consumers");
   const consumers = docs.map((doc) => {
     const consumer = { id: doc.id, ...doc.data() } as Consumer;
     return maskConsumerPii(consumer);
   });
+  logger.info("[consumersList] Consumers mapped", { count: consumers.length });
 
   // Get total count (with optional KYC filter)
+  logger.info("[consumersList] Getting total count");
   let countQuery = db.collection("consumers").where("tenantId", "==", tenantId);
   if (filters.kycStatus) {
     countQuery = countQuery.where("kycStatus", "==", filters.kycStatus);
   }
   const countSnapshot = await countQuery.count().get();
+  const totalCount = countSnapshot.data().count;
+  logger.info("[consumersList] Total count retrieved", { totalCount });
 
+  logger.info("[consumersList] Returning response");
   return {
     success: true,
     data: {
       items: consumers,
       pagination: {
-        total: countSnapshot.data().count,
+        total: totalCount,
         limit: pagination.limit,
         hasMore,
         nextCursor: hasMore ? docs[docs.length - 1].id : undefined,

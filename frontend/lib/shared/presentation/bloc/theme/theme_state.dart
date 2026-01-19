@@ -2,7 +2,7 @@ part of 'theme_bloc.dart';
 
 class ThemeState extends Equatable {
   const ThemeState({
-    this.themeMode = ThemeMode.system,
+    this.themeMode = ThemeMode.light,
   });
 
   final ThemeMode themeMode;

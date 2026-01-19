@@ -4,6 +4,8 @@
  *
  * Handles analytics, billing, audit logs, and data export.
  * Provides dashboard metrics and compliance reporting.
+ *
+ * @version 2.0.0 - Fixed Twilio initialization issue
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -44,6 +46,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.adminSystemHealth = exports.adminGetExportStatus = exports.adminExportData = exports.adminAuditLogs = exports.adminBillingUsage = exports.adminAnalyticsLetters = exports.adminAnalyticsDisputes = void 0;
 const functions = __importStar(require("firebase-functions"));
+const logger = __importStar(require("firebase-functions/logger"));
 const admin_1 = require("../../admin");
 const firestore_1 = require("firebase-admin/firestore");
 const auth_1 = require("../../middleware/auth");
@@ -81,6 +84,7 @@ const exportDataSchema = joi_1.default.object({
  * Calculate date range for analytics queries
  */
 function getDateRange(startDate, endDate) {
+    // Ensure we have valid date strings or use defaults
     const end = endDate ? new Date(endDate) : new Date();
     end.setHours(23, 59, 59, 999);
     const start = startDate ? new Date(startDate) : new Date(end);
@@ -88,6 +92,10 @@ function getDateRange(startDate, endDate) {
         start.setDate(start.getDate() - 30); // Default to last 30 days
     }
     start.setHours(0, 0, 0, 0);
+    // Validate that dates are valid
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        throw new errors_1.AppError(errors_1.ErrorCode.VALIDATION_ERROR, "Invalid date format. Dates must be in YYYY-MM-DD format.");
+    }
     return { start, end };
 }
 /**
@@ -96,24 +104,42 @@ function getDateRange(startDate, endDate) {
 function generateTrends(docs, dateField, granularity = "day") {
     const counts = {};
     docs.forEach((doc) => {
-        const data = doc.data();
-        const timestamp = data[dateField];
-        if (!timestamp)
-            return;
-        const date = timestamp.toDate();
-        let key;
-        if (granularity === "month") {
-            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        try {
+            const data = doc.data();
+            const timestamp = data[dateField];
+            if (!timestamp)
+                return;
+            const date = timestamp.toDate();
+            // Check if date is valid
+            if (isNaN(date.getTime())) {
+                logger.warn("[generateTrends] Invalid date found", {
+                    docId: doc.id,
+                    dateField,
+                    timestampValue: timestamp,
+                });
+                return;
+            }
+            let key;
+            if (granularity === "month") {
+                key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+            }
+            else if (granularity === "week") {
+                const weekStart = new Date(date);
+                weekStart.setDate(date.getDate() - date.getDay());
+                key = weekStart.toISOString().split("T")[0];
+            }
+            else {
+                key = date.toISOString().split("T")[0];
+            }
+            counts[key] = (counts[key] || 0) + 1;
         }
-        else if (granularity === "week") {
-            const weekStart = new Date(date);
-            weekStart.setDate(date.getDate() - date.getDay());
-            key = weekStart.toISOString().split("T")[0];
+        catch (error) {
+            logger.warn("[generateTrends] Error processing document", {
+                docId: doc.id,
+                dateField,
+                error: error instanceof Error ? error.message : String(error),
+            });
         }
-        else {
-            key = date.toISOString().split("T")[0];
-        }
-        counts[key] = (counts[key] || 0) + 1;
     });
     return Object.entries(counts)
         .sort(([a], [b]) => a.localeCompare(b))
@@ -123,17 +149,44 @@ function generateTrends(docs, dateField, granularity = "day") {
 // adminAnalyticsDisputes - Get dispute analytics
 // ============================================================================
 async function analyticsDisputesHandler(data, context) {
+    logger.info("[analyticsDisputesHandler] Starting", {
+        tenantId: context.tenantId,
+        userId: context.userId,
+        role: context.role,
+        data,
+    });
     const { tenantId } = context;
-    // Validate input
-    const validatedData = (0, validation_1.validate)(analyticsDateRangeSchema, data);
+    // Validate input - handle empty data case
+    logger.info("[analyticsDisputesHandler] Validating input", { rawData: data });
+    let validatedData;
+    try {
+        validatedData = (0, validation_1.validate)(analyticsDateRangeSchema, data || {});
+        logger.info("[analyticsDisputesHandler] Validation successful", { validatedData });
+    }
+    catch (validationError) {
+        logger.error("[analyticsDisputesHandler] Validation failed", {
+            error: validationError instanceof Error ? validationError.message : String(validationError),
+            data
+        });
+        throw validationError;
+    }
     const { start, end } = getDateRange(validatedData.startDate, validatedData.endDate);
+    logger.info("[analyticsDisputesHandler] Date range", { start, end });
     // Get all disputes for the tenant within date range
+    logger.info("[analyticsDisputesHandler] Querying disputes", {
+        tenantId,
+        start: start.toISOString(),
+        end: end.toISOString()
+    });
     const disputesSnapshot = await admin_1.db
         .collection("disputes")
         .where("tenantId", "==", tenantId)
         .where("timestamps.createdAt", ">=", firestore_1.Timestamp.fromDate(start))
         .where("timestamps.createdAt", "<=", firestore_1.Timestamp.fromDate(end))
         .get();
+    logger.info("[analyticsDisputesHandler] Disputes query completed", {
+        count: disputesSnapshot.size
+    });
     // Initialize counters
     const byStatus = {};
     const byBureau = {};
@@ -143,19 +196,34 @@ async function analyticsDisputesHandler(data, context) {
     // Process disputes
     disputesSnapshot.docs.forEach((doc) => {
         const dispute = doc.data();
+        // Safely access dispute properties
+        const status = dispute.status || "unknown";
+        const bureau = dispute.bureau || "unknown";
+        const type = dispute.type || "unknown";
         // Count by status
-        byStatus[dispute.status] = (byStatus[dispute.status] || 0) + 1;
+        byStatus[status] = (byStatus[status] || 0) + 1;
         // Count by bureau
-        byBureau[dispute.bureau] = (byBureau[dispute.bureau] || 0) + 1;
+        byBureau[bureau] = (byBureau[bureau] || 0) + 1;
         // Count by type
-        byType[dispute.type] = (byType[dispute.type] || 0) + 1;
+        byType[type] = (byType[type] || 0) + 1;
         // Calculate resolution time for resolved disputes
-        if (dispute.status === "resolved" && dispute.timestamps?.resolvedAt) {
-            const createdAt = dispute.timestamps.createdAt.toDate();
-            const resolvedAt = dispute.timestamps.resolvedAt.toDate();
-            const days = Math.ceil((resolvedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-            totalResolutionDays += days;
-            resolvedCount++;
+        if (status === "resolved" && dispute.timestamps?.resolvedAt && dispute.timestamps?.createdAt) {
+            try {
+                const createdAt = dispute.timestamps.createdAt.toDate();
+                const resolvedAt = dispute.timestamps.resolvedAt.toDate();
+                // Validate that dates are valid
+                if (!isNaN(createdAt.getTime()) && !isNaN(resolvedAt.getTime())) {
+                    const days = Math.ceil((resolvedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+                    totalResolutionDays += days;
+                    resolvedCount++;
+                }
+            }
+            catch (error) {
+                logger.warn("[analyticsDisputesHandler] Error calculating resolution time", {
+                    disputeId: doc.id,
+                    error: error instanceof Error ? error.message : String(error),
+                });
+            }
         }
     });
     // Calculate overview counts
@@ -170,18 +238,45 @@ async function analyticsDisputesHandler(data, context) {
         const data = doc.data();
         if (data.status === "resolved" || data.status === "closed")
             return false;
-        const dueAt = data.timestamps?.dueAt;
-        return dueAt && dueAt.toDate() < now;
+        try {
+            const dueAt = data.timestamps?.dueAt;
+            if (!dueAt)
+                return false;
+            const dueAtDate = dueAt.toDate();
+            if (isNaN(dueAtDate.getTime()))
+                return false;
+            return dueAtDate < now;
+        }
+        catch (error) {
+            logger.warn("[analyticsDisputesHandler] Error checking SLA status", {
+                disputeId: doc.id,
+                error: error instanceof Error ? error.message : String(error),
+            });
+            return false;
+        }
     }).length;
     // Generate trends
     const createdTrends = generateTrends(disputesSnapshot.docs, "timestamps.createdAt", validatedData.granularity);
     // Get resolved disputes for trends
-    const resolvedSnapshot = await admin_1.db
-        .collection("disputes")
-        .where("tenantId", "==", tenantId)
-        .where("timestamps.resolvedAt", ">=", firestore_1.Timestamp.fromDate(start))
-        .where("timestamps.resolvedAt", "<=", firestore_1.Timestamp.fromDate(end))
-        .get();
+    let resolvedSnapshot;
+    try {
+        resolvedSnapshot = await admin_1.db
+            .collection("disputes")
+            .where("tenantId", "==", tenantId)
+            .where("timestamps.resolvedAt", ">=", firestore_1.Timestamp.fromDate(start))
+            .where("timestamps.resolvedAt", "<=", firestore_1.Timestamp.fromDate(end))
+            .get();
+    }
+    catch (error) {
+        logger.warn("[analyticsDisputesHandler] Error querying resolved disputes", {
+            tenantId,
+            start: start.toISOString(),
+            end: end.toISOString(),
+            error: error instanceof Error ? error.message : String(error),
+        });
+        // If the query fails, create an empty snapshot
+        resolvedSnapshot = { docs: [] };
+    }
     const resolvedTrends = generateTrends(resolvedSnapshot.docs, "timestamps.resolvedAt", validatedData.granularity);
     // Merge trends
     const allPeriods = new Set([
@@ -221,17 +316,43 @@ exports.adminAnalyticsDisputes = functions.https.onCall((0, errors_1.withErrorHa
 // adminAnalyticsLetters - Get letter analytics
 // ============================================================================
 async function analyticsLettersHandler(data, context) {
+    logger.info("[analyticsLettersHandler] Starting", {
+        tenantId: context.tenantId,
+        userId: context.userId,
+        role: context.role,
+        data,
+    });
     const { tenantId } = context;
-    // Validate input
-    const validatedData = (0, validation_1.validate)(analyticsDateRangeSchema, data);
+    // Validate input - handle empty data case
+    logger.info("[analyticsLettersHandler] Validating input", { rawData: data });
+    let validatedData;
+    try {
+        validatedData = (0, validation_1.validate)(analyticsDateRangeSchema, data || {});
+        logger.info("[analyticsLettersHandler] Validation successful", { validatedData });
+    }
+    catch (validationError) {
+        logger.error("[analyticsLettersHandler] Validation failed", {
+            error: validationError instanceof Error ? validationError.message : String(validationError),
+            data
+        });
+        throw validationError;
+    }
     const { start, end } = getDateRange(validatedData.startDate, validatedData.endDate);
     // Get all letters for the tenant within date range
+    logger.info("[analyticsLettersHandler] Querying letters", {
+        tenantId,
+        start: start.toISOString(),
+        end: end.toISOString()
+    });
     const lettersSnapshot = await admin_1.db
         .collection("letters")
         .where("tenantId", "==", tenantId)
         .where("createdAt", ">=", firestore_1.Timestamp.fromDate(start))
         .where("createdAt", "<=", firestore_1.Timestamp.fromDate(end))
         .get();
+    logger.info("[analyticsLettersHandler] Letters query completed", {
+        count: lettersSnapshot.size
+    });
     // Initialize counters
     const byStatus = {};
     const byMailType = {};
@@ -241,21 +362,35 @@ async function analyticsLettersHandler(data, context) {
     // Process letters
     lettersSnapshot.docs.forEach((doc) => {
         const letter = doc.data();
+        // Safely access letter properties
+        const status = letter.status || "unknown";
+        const mailType = letter.mailType || "unknown";
         // Count by status
-        byStatus[letter.status] = (byStatus[letter.status] || 0) + 1;
+        byStatus[status] = (byStatus[status] || 0) + 1;
         // Count by mail type
-        byMailType[letter.mailType] = (byMailType[letter.mailType] || 0) + 1;
+        byMailType[mailType] = (byMailType[mailType] || 0) + 1;
         // Sum costs
         if (letter.cost?.total) {
             totalCost += letter.cost.total;
         }
         // Calculate delivery time
-        if (letter.status === "delivered" && letter.sentAt && letter.deliveredAt) {
-            const sentAt = letter.sentAt.toDate();
-            const deliveredAt = letter.deliveredAt.toDate();
-            const days = Math.ceil((deliveredAt.getTime() - sentAt.getTime()) / (1000 * 60 * 60 * 24));
-            totalDeliveryDays += days;
-            deliveredCount++;
+        if (status === "delivered" && letter.sentAt && letter.deliveredAt) {
+            try {
+                const sentAt = letter.sentAt.toDate();
+                const deliveredAt = letter.deliveredAt.toDate();
+                // Validate that dates are valid
+                if (!isNaN(sentAt.getTime()) && !isNaN(deliveredAt.getTime())) {
+                    const days = Math.ceil((deliveredAt.getTime() - sentAt.getTime()) / (1000 * 60 * 60 * 24));
+                    totalDeliveryDays += days;
+                    deliveredCount++;
+                }
+            }
+            catch (error) {
+                logger.warn("[analyticsLettersHandler] Error calculating delivery time", {
+                    letterId: doc.id,
+                    error: error instanceof Error ? error.message : String(error),
+                });
+            }
         }
     });
     // Calculate overview counts

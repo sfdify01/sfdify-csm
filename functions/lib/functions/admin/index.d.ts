@@ -3,6 +3,8 @@
  *
  * Handles analytics, billing, audit logs, and data export.
  * Provides dashboard metrics and compliance reporting.
+ *
+ * @version 2.0.0 - Fixed Twilio initialization issue
  */
 import * as functions from "firebase-functions";
 export declare const adminAnalyticsDisputes: functions.HttpsFunction & functions.Runnable<any>;

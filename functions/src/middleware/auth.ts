@@ -6,6 +6,7 @@
  */
 
 import * as functions from "firebase-functions";
+import * as logger from "firebase-functions/logger";
 import { auth, db } from "../admin";
 import { AuthError, ForbiddenError, AppError, ErrorCode, NotFoundError } from "../utils/errors";
 import { UserRole, DocumentId, User, Tenant } from "../types";
@@ -108,20 +109,33 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
 export async function getAuthContext(
   context: functions.https.CallableContext
 ): Promise<AuthContext> {
+  logger.info("[getAuthContext] Extracting auth context");
+
   // Verify authentication
   if (!context.auth) {
+    logger.error("[getAuthContext] No auth context provided");
     throw new AuthError(ErrorCode.UNAUTHENTICATED, "Authentication required");
   }
 
   const { uid, token } = context.auth;
+  logger.info("[getAuthContext] User authenticated", { uid, email: token.email });
+
   const claims = token as unknown as CustomClaims;
+  logger.info("[getAuthContext] Token claims", {
+    hasTenantId: !!claims.tenantId,
+    hasRole: !!claims.role,
+    tenantId: claims.tenantId,
+    role: claims.role,
+  });
 
   // Verify tenant and role are set
   if (!claims.tenantId) {
+    logger.error("[getAuthContext] Missing tenantId in claims");
     throw new AuthError(ErrorCode.INVALID_TOKEN, "Tenant ID not found in token. Please sign in again.");
   }
 
   if (!claims.role) {
+    logger.error("[getAuthContext] Missing role in claims");
     throw new AuthError(ErrorCode.INVALID_TOKEN, "User role not found in token. Please contact support.");
   }
 
@@ -145,15 +159,24 @@ export async function getAuthContext(
 export async function getRequestContext(
   context: functions.https.CallableContext
 ): Promise<RequestContext> {
+  logger.info("[getRequestContext] Starting");
+
   const authContext = await getAuthContext(context);
+  logger.info("[getRequestContext] Auth context obtained", {
+    userId: authContext.userId,
+    tenantId: authContext.tenantId,
+  });
 
   // Fetch tenant
+  logger.info("[getRequestContext] Fetching tenant", { tenantId: authContext.tenantId });
   const tenantDoc = await db.collection("tenants").doc(authContext.tenantId).get();
   if (!tenantDoc.exists) {
+    logger.error("[getRequestContext] Tenant not found", { tenantId: authContext.tenantId });
     throw new NotFoundError("Tenant", authContext.tenantId);
   }
 
   const tenant = { id: tenantDoc.id, ...tenantDoc.data() } as Tenant;
+  logger.info("[getRequestContext] Tenant found", { tenantStatus: tenant.status });
 
   // Check tenant status
   if (tenant.status === "suspended") {
@@ -173,20 +196,25 @@ export async function getRequestContext(
   }
 
   // Fetch user
+  logger.info("[getRequestContext] Fetching user", { userId: authContext.userId });
   const userDoc = await db.collection("users").doc(authContext.userId).get();
   if (!userDoc.exists) {
+    logger.error("[getRequestContext] User not found", { userId: authContext.userId });
     throw new NotFoundError("User", authContext.userId);
   }
 
   const user = { id: userDoc.id, ...userDoc.data() } as User;
+  logger.info("[getRequestContext] User found", { email: user.email, disabled: user.disabled });
 
   // Check if user is disabled
   if (user.disabled) {
+    logger.error("[getRequestContext] User is disabled", { userId: authContext.userId });
     throw new AuthError(ErrorCode.UNAUTHORIZED, "Your account has been disabled.");
   }
 
   // Generate request ID for tracing
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  logger.info("[getRequestContext] Request context complete", { requestId });
 
   return {
     ...authContext,
@@ -261,13 +289,22 @@ export function withAuth<T, R>(
   fn: (data: T, context: RequestContext) => Promise<R>
 ): (data: T, callableContext: functions.https.CallableContext) => Promise<R> {
   return async (data: T, callableContext: functions.https.CallableContext) => {
+    logger.info("[withAuth] Starting authentication", { requiredPermissions });
+
     // Get request context (includes auth verification)
     const requestContext = await getRequestContext(callableContext);
 
     // Verify all required permissions
+    logger.info("[withAuth] Checking permissions", {
+      required: requiredPermissions,
+      userPermissions: requestContext.permissions,
+    });
+
     for (const permission of requiredPermissions) {
       requirePermission(requestContext, permission);
     }
+
+    logger.info("[withAuth] Permission check passed, calling handler");
 
     // Call the wrapped function
     return fn(data, requestContext);

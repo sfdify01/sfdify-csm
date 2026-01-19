@@ -46,6 +46,7 @@ exports.withErrorHandling = withErrorHandling;
 exports.assert = assert;
 exports.assertExists = assertExists;
 const functions = __importStar(require("firebase-functions"));
+const logger = __importStar(require("firebase-functions/logger"));
 const validation_1 = require("./validation");
 /**
  * Error codes used throughout the application
@@ -257,7 +258,18 @@ function formatErrorResponse(error) {
  * Convert AppError to Firebase HttpsError for callable functions
  */
 function toHttpsError(error) {
+    logger.info("[toHttpsError] Converting error", {
+        errorType: error?.constructor?.name,
+        isAppError: error instanceof AppError,
+        isValidationError: error instanceof validation_1.ValidationError,
+        isHttpsError: error instanceof functions.https.HttpsError,
+    });
     if (error instanceof AppError) {
+        logger.info("[toHttpsError] AppError detected", {
+            code: error.code,
+            message: error.message,
+            statusCode: error.statusCode,
+        });
         const codeMap = {
             400: "invalid-argument",
             401: "unauthenticated",
@@ -275,16 +287,28 @@ function toHttpsError(error) {
         });
     }
     if (error instanceof validation_1.ValidationError) {
+        logger.info("[toHttpsError] ValidationError detected", {
+            message: error.message,
+            details: error.details,
+        });
         return new functions.https.HttpsError("invalid-argument", error.message, {
             code: ErrorCode.VALIDATION_ERROR,
             validationErrors: error.details,
         });
     }
     if (error instanceof functions.https.HttpsError) {
+        logger.info("[toHttpsError] HttpsError passthrough", {
+            code: error.code,
+            message: error.message,
+        });
         return error;
     }
-    // Log unexpected errors
-    console.error("Unexpected error:", error);
+    // Log unexpected errors with full details
+    logger.error("[toHttpsError] Unexpected error", {
+        errorName: error instanceof Error ? error.name : "Unknown",
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+    });
     return new functions.https.HttpsError("internal", process.env.NODE_ENV === "production"
         ? "An unexpected error occurred"
         : (error instanceof Error ? error.message : "Unknown error"));
@@ -294,10 +318,17 @@ function toHttpsError(error) {
  */
 function withErrorHandling(fn) {
     return async (data, context) => {
+        logger.info("[withErrorHandling] Executing function");
         try {
-            return await fn(data, context);
+            const result = await fn(data, context);
+            logger.info("[withErrorHandling] Function completed successfully");
+            return result;
         }
         catch (error) {
+            logger.error("[withErrorHandling] Function threw error", {
+                errorType: error?.constructor?.name,
+                errorMessage: error instanceof Error ? error.message : String(error),
+            });
             throw toHttpsError(error);
         }
     };

@@ -114,6 +114,14 @@
       ]
     },
     {
+      "collectionGroup": "disputes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "timestamps.dueAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "letters",
       "queryScope": "COLLECTION",
       "fields": [
@@ -129,6 +137,22 @@
         { "fieldPath": "tenantId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "letters",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "letters",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId", "order": "ASCENDING" },
+        { "fieldPath": "sentAt", "order": "ASCENDING" }
       ]
     },
     {
@@ -277,6 +301,14 @@
       "fields": [
         { "fieldPath": "tenantId", "order": "ASCENDING" },
         { "fieldPath": "timestamps.createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "disputes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId", "order": "ASCENDING" },
+        { "fieldPath": "timestamps.createdAt", "order": "DESCENDING" }
       ]
     },
     {

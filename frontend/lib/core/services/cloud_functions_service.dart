@@ -160,6 +160,7 @@ class CloudFunctionsService {
     required T Function(Map<String, dynamic>) fromJson,
   }) async {
     try {
+      debugPrint('[CloudFunctions] Calling $functionName with data: $data');
       final callable = _functions.httpsCallable(functionName);
       final result = await callable.call<Map<String, dynamic>>(data).timeout(
         const Duration(seconds: 30),
@@ -170,9 +171,11 @@ class CloudFunctionsService {
       );
 
       final responseData = result.data;
+      debugPrint('[CloudFunctions] Response from $functionName: $responseData');
       final success = responseData['success'] as bool? ?? false;
 
       if (!success) {
+        debugPrint('[CloudFunctions] $functionName returned success=false');
         return ApiResponse(
           success: false,
           error: responseData['error'] != null
@@ -185,6 +188,7 @@ class CloudFunctionsService {
 
       final paginatedData = responseData['data'] as Map<String, dynamic>?;
       if (paginatedData == null) {
+        debugPrint('[CloudFunctions] $functionName returned no data');
         return const ApiResponse(
           success: false,
           error: ApiError(code: 'INVALID_RESPONSE', message: 'No data'),
@@ -196,6 +200,7 @@ class CloudFunctionsService {
         data: PaginatedResponse.fromJson(paginatedData, fromJson),
       );
     } on FirebaseFunctionsException catch (e) {
+      debugPrint('[CloudFunctions] FirebaseFunctionsException in $functionName: ${e.code} - ${e.message} - ${e.details}');
       return ApiResponse(
         success: false,
         error: ApiError(
@@ -205,6 +210,7 @@ class CloudFunctionsService {
         ),
       );
     } catch (e) {
+      debugPrint('[CloudFunctions] Unexpected error in $functionName: $e');
       return ApiResponse(
         success: false,
         error: ApiError(
