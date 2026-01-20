@@ -135,7 +135,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthBlocState> {
         password: event.password,
         displayName: event.displayName,
         companyName: event.companyName,
-        plan: event.plan,
       );
 
       _logger.i('Registration successful for: ${authState.userId}');

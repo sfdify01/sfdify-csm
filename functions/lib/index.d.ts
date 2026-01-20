@@ -11,12 +11,12 @@ export { consumersCreate, consumersGet, consumersUpdate, consumersList, consumer
 export { disputesCreate, disputesGet, disputesUpdate, disputesList, disputesSubmit, disputesApprove, disputesClose, } from "./functions/disputes";
 export { lettersGenerate, lettersGet, lettersApprove, lettersSend, lettersList, } from "./functions/letters";
 export { evidenceUpload, evidenceGet, evidenceUpdate, evidenceDelete, evidenceList, evidenceLinkToLetter, evidenceUnlinkFromLetter, } from "./functions/evidence";
-export { adminAnalyticsDisputes, adminAnalyticsLetters, adminBillingUsage, adminAuditLogs, adminExportData, adminGetExportStatus, adminSystemHealth, } from "./functions/admin";
+export { adminAnalyticsDisputes, adminAnalyticsLetters, adminAuditLogs, adminExportData, adminGetExportStatus, adminSystemHealth, } from "./functions/admin";
 export { usersCreate, usersGet, usersUpdate, usersDelete, usersList, usersSetRole, } from "./functions/users";
 export { tenantsCreate, tenantsGet, tenantsUpdate, tenantsList, } from "./functions/tenants";
 export { authSignUp, authRequestPasswordReset, } from "./functions/auth";
 export { webhooksLob, webhooksSmartCredit, webhooksRetry, webhooksList, } from "./functions/webhooks";
-export { scheduledSlaChecker, scheduledReportRefresh, scheduledReconciliation, scheduledBillingAggregator, scheduledCleanup, } from "./functions/scheduled";
+export { scheduledSlaChecker, scheduledReportRefresh, scheduledReconciliation, scheduledCleanup, } from "./functions/scheduled";
 export { onDisputeCreate, onDisputeUpdate, onLetterStatusChange, onConsumerCreate, onEvidenceUpload, onSmartCreditConnectionChange, } from "./functions/triggers";
 import * as functions from "firebase-functions";
 export declare const testLobIntegration: functions.HttpsFunction;

@@ -52,33 +52,15 @@ const auth_1 = require("../../middleware/auth");
 const errors_1 = require("../../utils/errors");
 const audit_1 = require("../../utils/audit");
 // ============================================================================
-// Default Feature Configurations by Plan
+// Default Feature Configuration (all features enabled, no limits)
 // ============================================================================
-const PLAN_FEATURES = {
-    starter: {
-        aiDraftingEnabled: false,
-        certifiedMailEnabled: false,
-        identityTheftBlockEnabled: false,
-        cfpbExportEnabled: false,
-        maxConsumers: 100,
-        maxDisputesPerMonth: 500,
-    },
-    professional: {
-        aiDraftingEnabled: true,
-        certifiedMailEnabled: true,
-        identityTheftBlockEnabled: true,
-        cfpbExportEnabled: false,
-        maxConsumers: 1000,
-        maxDisputesPerMonth: 5000,
-    },
-    enterprise: {
-        aiDraftingEnabled: true,
-        certifiedMailEnabled: true,
-        identityTheftBlockEnabled: true,
-        cfpbExportEnabled: true,
-        maxConsumers: 10000,
-        maxDisputesPerMonth: 50000,
-    },
+const DEFAULT_FEATURES = {
+    aiDraftingEnabled: true,
+    certifiedMailEnabled: true,
+    identityTheftBlockEnabled: true,
+    cfpbExportEnabled: true,
+    maxConsumers: -1, // -1 means unlimited
+    maxDisputesPerMonth: -1, // -1 means unlimited
 };
 // ============================================================================
 // Validation Helpers
@@ -128,22 +110,20 @@ function validateCompanyName(name) {
 // ============================================================================
 // Helper: Create Tenant and User
 // ============================================================================
-async function createTenantAndUser(userId, email, displayName, companyName, plan) {
+async function createTenantAndUser(userId, email, displayName, companyName) {
     // Generate tenant ID
     const tenantId = `tenant_${(0, uuid_1.v4)().replace(/-/g, "").substring(0, 12)}`;
     functions.logger.info("Creating tenant and user", {
         userId,
         email,
         tenantId,
-        plan,
     });
-    // Get default features for the plan
-    const features = PLAN_FEATURES[plan];
+    // Get default features (all enabled, unlimited)
+    const features = DEFAULT_FEATURES;
     // Create tenant document
     const tenant = {
         id: tenantId,
         name: companyName,
-        plan,
         status: "active",
         branding: {
             primaryColor: "#1E40AF",
@@ -242,7 +222,6 @@ async function signUpHandler(data, context) {
     functions.logger.info("Signup request received", {
         email: data.email,
         companyName: data.companyName,
-        plan: data.plan || "starter",
         ip: requestIp,
     });
     // Validate and sanitize input
@@ -250,10 +229,6 @@ async function signUpHandler(data, context) {
     validatePassword(data.password);
     const displayName = validateDisplayName(data.displayName);
     const companyName = validateCompanyName(data.companyName);
-    const plan = data.plan || "starter";
-    if (!["starter", "professional", "enterprise"].includes(plan)) {
-        throw new errors_1.AppError(errors_1.ErrorCode.VALIDATION_ERROR, "Invalid plan selected", 400);
-    }
     // Check if email already exists
     try {
         const existingUser = await admin_1.auth.getUserByEmail(email);
@@ -287,7 +262,7 @@ async function signUpHandler(data, context) {
     }
     try {
         // Create tenant and user document
-        const { tenantId } = await createTenantAndUser(userRecord.uid, email, displayName, companyName, plan);
+        const { tenantId } = await createTenantAndUser(userRecord.uid, email, displayName, companyName);
         // Try to send email verification (don't fail signup if this fails)
         try {
             const verificationLink = await admin_1.auth.generateEmailVerificationLink(email);
@@ -309,7 +284,6 @@ async function signUpHandler(data, context) {
             userId: userRecord.uid,
             tenantId,
             email,
-            plan,
             durationMs: duration,
         });
         return {

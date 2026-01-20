@@ -65,7 +65,6 @@ export {
 export {
   adminAnalyticsDisputes,
   adminAnalyticsLetters,
-  adminBillingUsage,
   adminAuditLogs,
   adminExportData,
   adminGetExportStatus,
@@ -119,7 +118,6 @@ export {
   scheduledSlaChecker,
   scheduledReportRefresh,
   scheduledReconciliation,
-  scheduledBillingAggregator,
   scheduledCleanup,
 } from "./functions/scheduled";
 

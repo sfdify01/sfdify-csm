@@ -175,7 +175,6 @@ exports.updateUserSchema = joi_1.default.object({
 // ============================================================================
 exports.createTenantSchema = joi_1.default.object({
     name: joi_1.default.string().min(1).max(200).required(),
-    plan: joi_1.default.string().valid("starter", "professional", "enterprise").required(),
     branding: joi_1.default.object({
         primaryColor: joi_1.default.string().pattern(/^#[0-9A-Fa-f]{6}$/).default("#1E40AF"),
         companyName: joi_1.default.string().min(1).max(200).required(),

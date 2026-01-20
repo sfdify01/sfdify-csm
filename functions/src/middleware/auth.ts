@@ -64,8 +64,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     "users:delete",
     "tenant:read",
     "tenant:write",
-    "billing:read",
-    "billing:write",
     "audit:read",
     "analytics:read",
     "settings:read",

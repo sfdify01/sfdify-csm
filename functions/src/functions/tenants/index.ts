@@ -38,7 +38,6 @@ import {
 
 interface CreateTenantInput {
   name: string;
-  plan: "starter" | "professional" | "enterprise";
   branding: {
     primaryColor?: string;
     companyName: string;
@@ -73,34 +72,16 @@ interface ListTenantsInput {
 }
 
 // ============================================================================
-// Default Feature Configurations by Plan
+// Default Feature Configuration (all features enabled, no limits)
 // ============================================================================
 
-const PLAN_FEATURES: Record<Tenant["plan"], TenantFeatures> = {
-  starter: {
-    aiDraftingEnabled: false,
-    certifiedMailEnabled: false,
-    identityTheftBlockEnabled: false,
-    cfpbExportEnabled: false,
-    maxConsumers: 100,
-    maxDisputesPerMonth: 500,
-  },
-  professional: {
-    aiDraftingEnabled: true,
-    certifiedMailEnabled: true,
-    identityTheftBlockEnabled: true,
-    cfpbExportEnabled: false,
-    maxConsumers: 1000,
-    maxDisputesPerMonth: 5000,
-  },
-  enterprise: {
-    aiDraftingEnabled: true,
-    certifiedMailEnabled: true,
-    identityTheftBlockEnabled: true,
-    cfpbExportEnabled: true,
-    maxConsumers: 10000,
-    maxDisputesPerMonth: 50000,
-  },
+const DEFAULT_FEATURES: TenantFeatures = {
+  aiDraftingEnabled: true,
+  certifiedMailEnabled: true,
+  identityTheftBlockEnabled: true,
+  cfpbExportEnabled: true,
+  maxConsumers: -1, // -1 means unlimited
+  maxDisputesPerMonth: -1, // -1 means unlimited
 };
 
 // ============================================================================
@@ -120,15 +101,13 @@ async function createTenantHandler(
   // Generate IDs
   const tenantId = `tenant_${uuidv4().replace(/-/g, "").substring(0, 12)}`;
 
-  // Get default features for the plan
-  const plan = validatedData.plan as Tenant["plan"];
-  const features = PLAN_FEATURES[plan];
+  // Get default features (all enabled, unlimited)
+  const features = DEFAULT_FEATURES;
 
   // Create tenant document
   const tenant: Tenant = {
     id: tenantId,
     name: validatedData.name,
-    plan: validatedData.plan,
     status: "active",
     branding: {
       primaryColor: validatedData.branding.primaryColor || "#1E40AF",

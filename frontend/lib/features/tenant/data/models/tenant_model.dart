@@ -8,7 +8,6 @@ class TenantModel extends TenantEntity {
   const TenantModel({
     required super.id,
     required super.name,
-    required super.plan,
     required super.status,
     super.logoUrl,
     super.primaryColor,

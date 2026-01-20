@@ -38,17 +38,15 @@ class AuthRegisterRequested extends AuthEvent {
     required this.password,
     required this.displayName,
     required this.companyName,
-    this.plan = 'starter',
   });
 
   final String email;
   final String password;
   final String displayName;
   final String companyName;
-  final String plan;
 
   @override
-  List<Object?> get props => [email, password, displayName, companyName, plan];
+  List<Object?> get props => [email, password, displayName, companyName];
 }
 
 /// Internal event when Firebase auth state changes

@@ -39,7 +39,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.scheduledCleanup = exports.scheduledBillingAggregator = exports.scheduledReconciliation = exports.scheduledReportRefresh = exports.scheduledSlaChecker = void 0;
+exports.scheduledCleanup = exports.scheduledReconciliation = exports.scheduledReportRefresh = exports.scheduledSlaChecker = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin_1 = require("../../admin");
 const firestore_1 = require("firebase-admin/firestore");
@@ -169,19 +169,6 @@ async function sendNotification(tenantId, type, data) {
                         channel: "email",
                         success: reportResult.success,
                         error: reportResult.error,
-                    });
-                    break;
-                case "billing_due":
-                    const billingResult = await emailService_1.emailService.send({
-                        to: recipient.email,
-                        subject: `Monthly Invoice Ready - ${data.period}`,
-                        text: `Your monthly invoice for ${data.period} is ready. Total due: $${data.total}. Log in to view details and pay.`,
-                        categories: ["billing"],
-                    });
-                    deliveryResults.push({
-                        channel: "email",
-                        success: billingResult.success,
-                        error: billingResult.error,
                     });
                     break;
             }
@@ -549,167 +536,6 @@ exports.scheduledReconciliation = functions.pubsub
     }
     catch (error) {
         functions.logger.error("Reconciliation scheduler failed", { error });
-        throw error;
-    }
-});
-// ============================================================================
-// scheduledBillingAggregator - Monthly billing aggregation
-// ============================================================================
-exports.scheduledBillingAggregator = functions.pubsub
-    .schedule("0 0 1 * *") // First day of each month at midnight
-    .timeZone("America/New_York")
-    .onRun(async () => {
-    const stats = {
-        tenantsProcessed: 0,
-        recordsCreated: 0,
-        errors: 0,
-    };
-    try {
-        // Get previous month's date range
-        const now = new Date();
-        const periodEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-        const periodStart = new Date(periodEnd.getFullYear(), periodEnd.getMonth(), 1);
-        // Get all active tenants
-        const tenantsQuery = await admin_1.db
-            .collection("tenants")
-            .where("status", "==", "active")
-            .get();
-        for (const tenantDoc of tenantsQuery.docs) {
-            try {
-                const tenant = { id: tenantDoc.id, ...tenantDoc.data() };
-                stats.tenantsProcessed++;
-                // Count letters sent
-                const lettersQuery = await admin_1.db
-                    .collection("letters")
-                    .where("tenantId", "==", tenant.id)
-                    .where("sentAt", ">=", firestore_1.Timestamp.fromDate(periodStart))
-                    .where("sentAt", "<=", firestore_1.Timestamp.fromDate(periodEnd))
-                    .get();
-                const letterCounts = {
-                    uspsFirstClass: 0,
-                    uspsCertified: 0,
-                    uspsCertifiedReturnReceipt: 0,
-                    total: lettersQuery.size,
-                };
-                let totalLetterCost = 0;
-                lettersQuery.docs.forEach((doc) => {
-                    const letter = doc.data();
-                    if (letter.mailType === "usps_first_class")
-                        letterCounts.uspsFirstClass++;
-                    else if (letter.mailType === "usps_certified")
-                        letterCounts.uspsCertified++;
-                    else if (letter.mailType === "usps_certified_return_receipt")
-                        letterCounts.uspsCertifiedReturnReceipt++;
-                    if (letter.cost?.total)
-                        totalLetterCost += letter.cost.total;
-                });
-                // Count disputes
-                const disputesCreatedQuery = await admin_1.db
-                    .collection("disputes")
-                    .where("tenantId", "==", tenant.id)
-                    .where("timestamps.createdAt", ">=", firestore_1.Timestamp.fromDate(periodStart))
-                    .where("timestamps.createdAt", "<=", firestore_1.Timestamp.fromDate(periodEnd))
-                    .count()
-                    .get();
-                const disputesResolvedQuery = await admin_1.db
-                    .collection("disputes")
-                    .where("tenantId", "==", tenant.id)
-                    .where("timestamps.resolvedAt", ">=", firestore_1.Timestamp.fromDate(periodStart))
-                    .where("timestamps.resolvedAt", "<=", firestore_1.Timestamp.fromDate(periodEnd))
-                    .count()
-                    .get();
-                // Count consumers
-                const activeConsumersQuery = await admin_1.db
-                    .collection("consumers")
-                    .where("tenantId", "==", tenant.id)
-                    .where("disabled", "==", false)
-                    .count()
-                    .get();
-                // Calculate storage usage
-                const evidenceQuery = await admin_1.db
-                    .collection("evidence")
-                    .where("tenantId", "==", tenant.id)
-                    .get();
-                const storageUsed = evidenceQuery.docs.reduce((total, doc) => total + (doc.data().fileSize || 0), 0);
-                // Calculate costs
-                const planPricing = {
-                    starter: 99,
-                    professional: 299,
-                    enterprise: 999,
-                };
-                const storageLimits = {
-                    starter: 5 * 1024 * 1024 * 1024,
-                    professional: 25 * 1024 * 1024 * 1024,
-                    enterprise: 100 * 1024 * 1024 * 1024,
-                };
-                const subscriptionCost = planPricing[tenant.plan] || 99;
-                const storageLimit = storageLimits[tenant.plan] || storageLimits.starter;
-                let overageCost = 0;
-                if (storageUsed > storageLimit) {
-                    const overageGB = (storageUsed - storageLimit) / (1024 * 1024 * 1024);
-                    overageCost = Math.ceil(overageGB) * 5;
-                }
-                // Create billing record
-                const recordId = (0, uuid_1.v4)();
-                await admin_1.db.collection("billingRecords").doc(recordId).set({
-                    id: recordId,
-                    tenantId: tenant.id,
-                    period: {
-                        start: firestore_1.Timestamp.fromDate(periodStart),
-                        end: firestore_1.Timestamp.fromDate(periodEnd),
-                        month: `${periodEnd.getFullYear()}-${String(periodEnd.getMonth() + 1).padStart(2, "0")}`,
-                    },
-                    usage: {
-                        letters: letterCounts,
-                        disputes: {
-                            created: disputesCreatedQuery.data().count,
-                            resolved: disputesResolvedQuery.data().count,
-                        },
-                        consumers: {
-                            active: activeConsumersQuery.data().count,
-                        },
-                        storage: {
-                            usedBytes: storageUsed,
-                            limitBytes: storageLimit,
-                        },
-                    },
-                    costs: {
-                        letters: totalLetterCost,
-                        subscription: subscriptionCost,
-                        overage: overageCost,
-                        total: totalLetterCost + subscriptionCost + overageCost,
-                        currency: "USD",
-                    },
-                    plan: tenant.plan,
-                    status: "pending",
-                    createdAt: firestore_1.FieldValue.serverTimestamp(),
-                });
-                stats.recordsCreated++;
-                // Notify tenant of new bill
-                await sendNotification(tenant.id, "billing_due", {
-                    billingRecordId: recordId,
-                    period: `${periodEnd.getFullYear()}-${String(periodEnd.getMonth() + 1).padStart(2, "0")}`,
-                    total: totalLetterCost + subscriptionCost + overageCost,
-                });
-                functions.logger.info("Created billing record for tenant", {
-                    tenantId: tenant.id,
-                    recordId,
-                    total: totalLetterCost + subscriptionCost + overageCost,
-                });
-            }
-            catch (error) {
-                functions.logger.error("Error processing tenant billing", {
-                    tenantId: tenantDoc.id,
-                    error,
-                });
-                stats.errors++;
-            }
-        }
-        functions.logger.info("Billing aggregator completed", stats);
-        return stats;
-    }
-    catch (error) {
-        functions.logger.error("Billing aggregator failed", { error });
         throw error;
     }
 });

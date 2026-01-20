@@ -219,7 +219,6 @@ export const updateUserSchema = Joi.object({
 
 export const createTenantSchema = Joi.object({
   name: Joi.string().min(1).max(200).required(),
-  plan: Joi.string().valid("starter", "professional", "enterprise").required(),
   branding: Joi.object({
     primaryColor: Joi.string().pattern(/^#[0-9A-Fa-f]{6}$/).default("#1E40AF"),
     companyName: Joi.string().min(1).max(200).required(),

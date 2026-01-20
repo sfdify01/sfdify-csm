@@ -9,7 +9,6 @@ part of 'tenant_model.dart';
 TenantModel _$TenantModelFromJson(Map<String, dynamic> json) => TenantModel(
   id: json['id'] as String,
   name: json['name'] as String,
-  plan: json['plan'] as String,
   status: json['status'] as String,
   logoUrl: json['logoUrl'] as String?,
   primaryColor: json['primaryColor'] as String?,
@@ -27,7 +26,6 @@ Map<String, dynamic> _$TenantModelToJson(TenantModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
-      'plan': instance.plan,
       'status': instance.status,
       'logoUrl': instance.logoUrl,
       'primaryColor': instance.primaryColor,

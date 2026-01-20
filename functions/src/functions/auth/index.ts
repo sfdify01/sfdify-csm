@@ -27,7 +27,6 @@ interface SignUpInput {
   password: string;
   displayName: string;
   companyName: string;
-  plan?: "starter" | "professional" | "enterprise";
 }
 
 interface SignUpResponse {
@@ -39,34 +38,16 @@ interface SignUpResponse {
 }
 
 // ============================================================================
-// Default Feature Configurations by Plan
+// Default Feature Configuration (all features enabled, no limits)
 // ============================================================================
 
-const PLAN_FEATURES: Record<Tenant["plan"], TenantFeatures> = {
-  starter: {
-    aiDraftingEnabled: false,
-    certifiedMailEnabled: false,
-    identityTheftBlockEnabled: false,
-    cfpbExportEnabled: false,
-    maxConsumers: 100,
-    maxDisputesPerMonth: 500,
-  },
-  professional: {
-    aiDraftingEnabled: true,
-    certifiedMailEnabled: true,
-    identityTheftBlockEnabled: true,
-    cfpbExportEnabled: false,
-    maxConsumers: 1000,
-    maxDisputesPerMonth: 5000,
-  },
-  enterprise: {
-    aiDraftingEnabled: true,
-    certifiedMailEnabled: true,
-    identityTheftBlockEnabled: true,
-    cfpbExportEnabled: true,
-    maxConsumers: 10000,
-    maxDisputesPerMonth: 50000,
-  },
+const DEFAULT_FEATURES: TenantFeatures = {
+  aiDraftingEnabled: true,
+  certifiedMailEnabled: true,
+  identityTheftBlockEnabled: true,
+  cfpbExportEnabled: true,
+  maxConsumers: -1, // -1 means unlimited
+  maxDisputesPerMonth: -1, // -1 means unlimited
 };
 
 // ============================================================================
@@ -159,8 +140,7 @@ async function createTenantAndUser(
   userId: string,
   email: string,
   displayName: string,
-  companyName: string,
-  plan: Tenant["plan"]
+  companyName: string
 ): Promise<{ tenantId: string }> {
   // Generate tenant ID
   const tenantId = `tenant_${uuidv4().replace(/-/g, "").substring(0, 12)}`;
@@ -169,11 +149,10 @@ async function createTenantAndUser(
     userId,
     email,
     tenantId,
-    plan,
   });
 
-  // Get default features for the plan
-  const features = PLAN_FEATURES[plan];
+  // Get default features (all enabled, unlimited)
+  const features = DEFAULT_FEATURES;
 
   // Create tenant document
   const tenant: Omit<Tenant, "createdAt" | "updatedAt"> & {
@@ -182,7 +161,6 @@ async function createTenantAndUser(
   } = {
     id: tenantId,
     name: companyName,
-    plan,
     status: "active",
     branding: {
       primaryColor: "#1E40AF",
@@ -300,7 +278,6 @@ async function signUpHandler(
   functions.logger.info("Signup request received", {
     email: data.email,
     companyName: data.companyName,
-    plan: data.plan || "starter",
     ip: requestIp,
   });
 
@@ -309,11 +286,6 @@ async function signUpHandler(
   validatePassword(data.password);
   const displayName = validateDisplayName(data.displayName);
   const companyName = validateCompanyName(data.companyName);
-
-  const plan = data.plan || "starter";
-  if (!["starter", "professional", "enterprise"].includes(plan)) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, "Invalid plan selected", 400);
-  }
 
   // Check if email already exists
   try {
@@ -362,8 +334,7 @@ async function signUpHandler(
       userRecord.uid,
       email,
       displayName,
-      companyName,
-      plan as Tenant["plan"]
+      companyName
     );
 
     // Try to send email verification (don't fail signup if this fails)
@@ -387,7 +358,6 @@ async function signUpHandler(
       userId: userRecord.uid,
       tenantId,
       email,
-      plan,
       durationMs: duration,
     });
 

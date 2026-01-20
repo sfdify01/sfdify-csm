@@ -503,7 +503,6 @@ class CloudFunctionsService {
     required String password,
     required String displayName,
     required String companyName,
-    String plan = 'starter',
     required T Function(Map<String, dynamic>) fromJson,
   }) =>
       call(
@@ -513,7 +512,6 @@ class CloudFunctionsService {
           'password': password,
           'displayName': displayName,
           'companyName': companyName,
-          'plan': plan,
         },
         fromJson: fromJson,
       );

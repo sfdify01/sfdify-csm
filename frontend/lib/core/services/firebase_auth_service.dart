@@ -174,7 +174,6 @@ class FirebaseAuthService {
     required String password,
     required String displayName,
     required String companyName,
-    String plan = 'starter',
   }) async {
     _logger.i('Attempting signup for: $email, company: $companyName');
 
@@ -185,7 +184,6 @@ class FirebaseAuthService {
         password: password,
         displayName: displayName.trim(),
         companyName: companyName.trim(),
-        plan: plan,
         fromJson: SignUpResult.fromJson,
       );
 

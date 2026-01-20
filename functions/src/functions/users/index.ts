@@ -28,8 +28,6 @@ import {
   ConflictError,
   ForbiddenError,
   assertExists,
-  ErrorCode,
-  AppError,
 } from "../../utils/errors";
 import { logAuditEvent } from "../../utils/audit";
 import { User, UserRole, ApiResponse, PaginatedResponse } from "../../types";
@@ -71,36 +69,10 @@ async function createUserHandler(
   data: CreateUserInput,
   context: RequestContext
 ): Promise<ApiResponse<User>> {
-  const { tenantId, userId: actorId, email: actorEmail, role: actorRole, ip, userAgent, tenant } = context;
+  const { tenantId, userId: actorId, email: actorEmail, role: actorRole, ip, userAgent } = context;
 
   // Validate input
   const validatedData = validate(createUserSchema, data);
-
-  // Check tenant user limits based on plan
-  const usersSnapshot = await db
-    .collection("users")
-    .where("tenantId", "==", tenantId)
-    .where("disabled", "==", false)
-    .count()
-    .get();
-
-  const currentUserCount = usersSnapshot.data().count;
-
-  // Define user limits per plan
-  const userLimits: Record<string, number> = {
-    starter: 3,
-    professional: 10,
-    enterprise: 100,
-  };
-
-  const maxUsers = userLimits[tenant.plan] || 3;
-  if (currentUserCount >= maxUsers) {
-    throw new AppError(
-      ErrorCode.TENANT_LIMIT_EXCEEDED,
-      `User limit reached for ${tenant.plan} plan. Maximum ${maxUsers} users allowed.`,
-      400
-    );
-  }
 
   // Check if email already exists
   try {

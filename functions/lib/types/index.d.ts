@@ -73,7 +73,6 @@ export interface TenantFeatures {
 export interface Tenant {
     id: DocumentId;
     name: string;
-    plan: "starter" | "professional" | "enterprise";
     status: "active" | "suspended" | "cancelled";
     branding: TenantBranding;
     lobConfig: TenantLobConfig;
@@ -83,11 +82,6 @@ export interface Tenant {
         webhookEndpoint: string;
     };
     features: TenantFeatures;
-    billing?: {
-        stripeCustomerId?: string;
-        currentPeriodStart: Timestamp;
-        currentPeriodEnd: Timestamp;
-    };
     createdAt: Timestamp | FieldValue;
     updatedAt: Timestamp | FieldValue;
 }
@@ -493,39 +487,6 @@ export interface ScheduledTask {
     result?: Record<string, unknown>;
     createdAt: Timestamp | FieldValue;
     createdBy: string;
-}
-export interface BillingRecord {
-    id: DocumentId;
-    tenantId: DocumentId;
-    periodStart: Timestamp;
-    periodEnd: Timestamp;
-    usage: {
-        consumersTotal: number;
-        consumersNew: number;
-        disputesCreated: number;
-        disputesResolved: number;
-        lettersGenerated: number;
-        lettersMailed: number;
-        smartCreditPulls: number;
-        smartCreditAlerts: number;
-        storageUsedMb: number;
-        filesStored: number;
-    };
-    costs: {
-        lobPostage: number;
-        lobPrinting: number;
-        smartCreditApi: number;
-        total: number;
-    };
-    billing: {
-        basePlanFee: number;
-        overageCharges: number;
-        totalDue: number;
-        status: "pending" | "invoiced" | "paid" | "overdue";
-    };
-    paidAt?: Timestamp;
-    invoiceUrl?: string;
-    createdAt: Timestamp | FieldValue;
 }
 export interface Notification {
     id: DocumentId;

@@ -5,7 +5,6 @@ class TenantEntity extends Equatable {
   const TenantEntity({
     required this.id,
     required this.name,
-    required this.plan,
     required this.status,
     this.logoUrl,
     this.primaryColor,
@@ -17,7 +16,6 @@ class TenantEntity extends Equatable {
 
   final String id;
   final String name;
-  final String plan;
   final String status;
   final String? logoUrl;
   final String? primaryColor;
@@ -26,20 +24,6 @@ class TenantEntity extends Equatable {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  /// Get plan display name
-  String get planDisplayName {
-    switch (plan) {
-      case 'starter':
-        return 'Starter';
-      case 'professional':
-        return 'Professional';
-      case 'enterprise':
-        return 'Enterprise';
-      default:
-        return plan;
-    }
-  }
-
   /// Check if tenant is active
   bool get isActive => status == 'active';
 
@@ -47,7 +31,6 @@ class TenantEntity extends Equatable {
   List<Object?> get props => [
         id,
         name,
-        plan,
         status,
         logoUrl,
         primaryColor,

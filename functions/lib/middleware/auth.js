@@ -74,8 +74,6 @@ exports.ROLE_PERMISSIONS = {
         "users:delete",
         "tenant:read",
         "tenant:write",
-        "billing:read",
-        "billing:write",
         "audit:read",
         "analytics:read",
         "settings:read",

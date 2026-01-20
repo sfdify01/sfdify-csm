@@ -9,7 +9,6 @@
 import * as functions from "firebase-functions";
 export declare const adminAnalyticsDisputes: functions.HttpsFunction & functions.Runnable<any>;
 export declare const adminAnalyticsLetters: functions.HttpsFunction & functions.Runnable<any>;
-export declare const adminBillingUsage: functions.HttpsFunction & functions.Runnable<any>;
 export declare const adminAuditLogs: functions.HttpsFunction & functions.Runnable<any>;
 export declare const adminExportData: functions.HttpsFunction & functions.Runnable<any>;
 export declare const adminGetExportStatus: functions.HttpsFunction & functions.Runnable<any>;

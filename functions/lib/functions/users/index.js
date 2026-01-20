@@ -56,27 +56,9 @@ const joi_1 = __importDefault(require("joi"));
 // usersCreate - Create a new user
 // ============================================================================
 async function createUserHandler(data, context) {
-    const { tenantId, userId: actorId, email: actorEmail, role: actorRole, ip, userAgent, tenant } = context;
+    const { tenantId, userId: actorId, email: actorEmail, role: actorRole, ip, userAgent } = context;
     // Validate input
     const validatedData = (0, validation_1.validate)(validation_1.createUserSchema, data);
-    // Check tenant user limits based on plan
-    const usersSnapshot = await admin_1.db
-        .collection("users")
-        .where("tenantId", "==", tenantId)
-        .where("disabled", "==", false)
-        .count()
-        .get();
-    const currentUserCount = usersSnapshot.data().count;
-    // Define user limits per plan
-    const userLimits = {
-        starter: 3,
-        professional: 10,
-        enterprise: 100,
-    };
-    const maxUsers = userLimits[tenant.plan] || 3;
-    if (currentUserCount >= maxUsers) {
-        throw new errors_1.AppError(errors_1.ErrorCode.TENANT_LIMIT_EXCEEDED, `User limit reached for ${tenant.plan} plan. Maximum ${maxUsers} users allowed.`, 400);
-    }
     // Check if email already exists
     try {
         const existingUser = await admin_1.auth.getUserByEmail(validatedData.email);

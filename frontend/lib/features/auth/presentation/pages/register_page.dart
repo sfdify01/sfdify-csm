@@ -21,7 +21,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  String _selectedPlan = 'starter';
 
   @override
   void dispose() {
@@ -41,7 +40,6 @@ class _RegisterPageState extends State<RegisterPage> {
               password: _passwordController.text,
               displayName: _displayNameController.text.trim(),
               companyName: _companyNameController.text.trim(),
-              plan: _selectedPlan,
             ),
           );
     }
@@ -84,7 +82,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       children: [
                         // Header
                         Text(
-                          'Start Your Free Trial',
+                          'Create Your Account',
                           style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -244,38 +242,6 @@ class _RegisterPageState extends State<RegisterPage> {
                           },
                         ),
                         const SizedBox(height: 16),
-
-                        // Plan Selection
-                        DropdownButtonFormField<String>(
-                          value: _selectedPlan,
-                          decoration: const InputDecoration(
-                            labelText: 'Plan',
-                            prefixIcon: Icon(Icons.workspace_premium_outlined),
-                            border: OutlineInputBorder(),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'starter',
-                              child: Text('Starter (Free Trial)'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'professional',
-                              child: Text('Professional'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'enterprise',
-                              child: Text('Enterprise'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() {
-                                _selectedPlan = value;
-                              });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 24),
 
                         // Error message
                         if (state.errorMessage != null) ...[

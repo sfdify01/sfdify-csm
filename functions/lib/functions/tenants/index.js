@@ -49,33 +49,15 @@ const validation_1 = require("../../utils/validation");
 const errors_1 = require("../../utils/errors");
 const audit_1 = require("../../utils/audit");
 // ============================================================================
-// Default Feature Configurations by Plan
+// Default Feature Configuration (all features enabled, no limits)
 // ============================================================================
-const PLAN_FEATURES = {
-    starter: {
-        aiDraftingEnabled: false,
-        certifiedMailEnabled: false,
-        identityTheftBlockEnabled: false,
-        cfpbExportEnabled: false,
-        maxConsumers: 100,
-        maxDisputesPerMonth: 500,
-    },
-    professional: {
-        aiDraftingEnabled: true,
-        certifiedMailEnabled: true,
-        identityTheftBlockEnabled: true,
-        cfpbExportEnabled: false,
-        maxConsumers: 1000,
-        maxDisputesPerMonth: 5000,
-    },
-    enterprise: {
-        aiDraftingEnabled: true,
-        certifiedMailEnabled: true,
-        identityTheftBlockEnabled: true,
-        cfpbExportEnabled: true,
-        maxConsumers: 10000,
-        maxDisputesPerMonth: 50000,
-    },
+const DEFAULT_FEATURES = {
+    aiDraftingEnabled: true,
+    certifiedMailEnabled: true,
+    identityTheftBlockEnabled: true,
+    cfpbExportEnabled: true,
+    maxConsumers: -1, // -1 means unlimited
+    maxDisputesPerMonth: -1, // -1 means unlimited
 };
 // ============================================================================
 // tenantsCreate - Create a new tenant
@@ -89,14 +71,12 @@ async function createTenantHandler(data) {
     const validatedData = (0, validation_1.validate)(validation_1.createTenantSchema, data);
     // Generate IDs
     const tenantId = `tenant_${(0, uuid_1.v4)().replace(/-/g, "").substring(0, 12)}`;
-    // Get default features for the plan
-    const plan = validatedData.plan;
-    const features = PLAN_FEATURES[plan];
+    // Get default features (all enabled, unlimited)
+    const features = DEFAULT_FEATURES;
     // Create tenant document
     const tenant = {
         id: tenantId,
         name: validatedData.name,
-        plan: validatedData.plan,
         status: "active",
         branding: {
             primaryColor: validatedData.branding.primaryColor || "#1E40AF",
