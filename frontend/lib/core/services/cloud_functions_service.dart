@@ -352,13 +352,28 @@ class CloudFunctionsService {
   // Letter Functions
   // ============================================================================
 
-  Future<ApiResponse<T>> lettersGenerate<T>(
-    String disputeId,
-    T Function(Map<String, dynamic>) fromJson,
-  ) =>
+  Future<ApiResponse<T>> lettersGenerate<T>({
+    required String disputeId,
+    required String templateId,
+    required String mailType,
+    bool? includeEvidenceIndex,
+    bool? attachEvidence,
+    String? additionalText,
+    required T Function(Map<String, dynamic>) fromJson,
+  }) =>
       call(
         functionName: 'lettersGenerate',
-        data: {'disputeId': disputeId},
+        data: {
+          'disputeId': disputeId,
+          'templateId': templateId,
+          'mailType': mailType,
+          if (includeEvidenceIndex != null || attachEvidence != null || additionalText != null)
+            'customizations': {
+              if (includeEvidenceIndex != null) 'includeEvidenceIndex': includeEvidenceIndex,
+              if (attachEvidence != null) 'attachEvidence': attachEvidence,
+              if (additionalText != null) 'additionalText': additionalText,
+            },
+        },
         fromJson: fromJson,
       );
 
@@ -382,13 +397,21 @@ class CloudFunctionsService {
         fromJson: fromJson,
       );
 
-  Future<ApiResponse<T>> lettersSend<T>(
-    String letterId,
-    T Function(Map<String, dynamic>) fromJson,
-  ) =>
+  Future<ApiResponse<T>> lettersSend<T>({
+    required String letterId,
+    required String idempotencyKey,
+    String? mailType,
+    String? scheduledSendDate,
+    required T Function(Map<String, dynamic>) fromJson,
+  }) =>
       call(
         functionName: 'lettersSend',
-        data: {'letterId': letterId},
+        data: {
+          'letterId': letterId,
+          'idempotencyKey': idempotencyKey,
+          if (mailType != null) 'mailType': mailType,
+          if (scheduledSendDate != null) 'scheduledSendDate': scheduledSendDate,
+        },
         fromJson: fromJson,
       );
 

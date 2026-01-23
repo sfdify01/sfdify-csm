@@ -141,11 +141,15 @@ class LetterGenerateBloc
     LetterGenerateSubmitted event,
     Emitter<LetterGenerateState> emit,
   ) async {
-    if (!state.canSubmit || _disputeId == null) return;
+    if (!state.canSubmit || _disputeId == null || state.selectedTemplateId == null) return;
 
     emit(state.copyWith(status: LetterGenerateStatus.submitting));
 
-    final result = await _letterRepository.generateLetter(_disputeId!);
+    final result = await _letterRepository.generateLetter(
+      disputeId: _disputeId!,
+      templateId: state.selectedTemplateId!,
+      mailType: state.selectedMailType,
+    );
 
     result.fold(
       (failure) => emit(state.copyWith(

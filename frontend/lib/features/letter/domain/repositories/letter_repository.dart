@@ -12,9 +12,21 @@ abstract class LetterRepository {
 
   Future<Either<Failure, LetterEntity>> getLetter(String letterId);
 
-  Future<Either<Failure, LetterEntity>> generateLetter(String disputeId);
+  Future<Either<Failure, LetterEntity>> generateLetter({
+    required String disputeId,
+    required String templateId,
+    required String mailType,
+    bool? includeEvidenceIndex,
+    bool? attachEvidence,
+    String? additionalText,
+  });
 
   Future<Either<Failure, LetterEntity>> approveLetter(String letterId);
 
-  Future<Either<Failure, LetterEntity>> sendLetter(String letterId);
+  Future<Either<Failure, LetterEntity>> sendLetter({
+    required String letterId,
+    required String idempotencyKey,
+    String? mailType,
+    String? scheduledSendDate,
+  });
 }

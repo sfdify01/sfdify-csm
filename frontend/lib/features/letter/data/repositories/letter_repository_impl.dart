@@ -68,13 +68,27 @@ class LetterRepositoryImpl implements LetterRepository {
   }
 
   @override
-  Future<Either<Failure, LetterEntity>> generateLetter(String disputeId) async {
+  Future<Either<Failure, LetterEntity>> generateLetter({
+    required String disputeId,
+    required String templateId,
+    required String mailType,
+    bool? includeEvidenceIndex,
+    bool? attachEvidence,
+    String? additionalText,
+  }) async {
     if (!await _networkInfo.isConnected) {
       return const Left(NetworkFailure());
     }
 
     try {
-      final letter = await _remoteDataSource.generateLetter(disputeId);
+      final letter = await _remoteDataSource.generateLetter(
+        disputeId: disputeId,
+        templateId: templateId,
+        mailType: mailType,
+        includeEvidenceIndex: includeEvidenceIndex,
+        attachEvidence: attachEvidence,
+        additionalText: additionalText,
+      );
       return Right(letter);
     } on ServerException catch (e) {
       return Left(ServerFailure(message: e.message));
@@ -108,13 +122,23 @@ class LetterRepositoryImpl implements LetterRepository {
   }
 
   @override
-  Future<Either<Failure, LetterEntity>> sendLetter(String letterId) async {
+  Future<Either<Failure, LetterEntity>> sendLetter({
+    required String letterId,
+    required String idempotencyKey,
+    String? mailType,
+    String? scheduledSendDate,
+  }) async {
     if (!await _networkInfo.isConnected) {
       return const Left(NetworkFailure());
     }
 
     try {
-      final letter = await _remoteDataSource.sendLetter(letterId);
+      final letter = await _remoteDataSource.sendLetter(
+        letterId: letterId,
+        idempotencyKey: idempotencyKey,
+        mailType: mailType,
+        scheduledSendDate: scheduledSendDate,
+      );
       return Right(letter);
     } on ServerException catch (e) {
       return Left(ServerFailure(message: e.message));

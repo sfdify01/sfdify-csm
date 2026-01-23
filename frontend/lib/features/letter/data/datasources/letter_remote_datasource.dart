@@ -10,9 +10,21 @@ abstract class LetterRemoteDataSource {
     String? status,
   });
   Future<LetterModel> getLetter(String letterId);
-  Future<LetterModel> generateLetter(String disputeId);
+  Future<LetterModel> generateLetter({
+    required String disputeId,
+    required String templateId,
+    required String mailType,
+    bool? includeEvidenceIndex,
+    bool? attachEvidence,
+    String? additionalText,
+  });
   Future<LetterModel> approveLetter(String letterId);
-  Future<LetterModel> sendLetter(String letterId);
+  Future<LetterModel> sendLetter({
+    required String letterId,
+    required String idempotencyKey,
+    String? mailType,
+    String? scheduledSendDate,
+  });
 }
 
 @Injectable(as: LetterRemoteDataSource)
@@ -58,10 +70,22 @@ class LetterRemoteDataSourceImpl implements LetterRemoteDataSource {
   }
 
   @override
-  Future<LetterModel> generateLetter(String disputeId) async {
+  Future<LetterModel> generateLetter({
+    required String disputeId,
+    required String templateId,
+    required String mailType,
+    bool? includeEvidenceIndex,
+    bool? attachEvidence,
+    String? additionalText,
+  }) async {
     final response = await _functionsService.lettersGenerate(
-      disputeId,
-      (json) => LetterModel.fromJson(json),
+      disputeId: disputeId,
+      templateId: templateId,
+      mailType: mailType,
+      includeEvidenceIndex: includeEvidenceIndex,
+      attachEvidence: attachEvidence,
+      additionalText: additionalText,
+      fromJson: (json) => LetterModel.fromJson(json),
     );
 
     if (!response.success || response.data == null) {
@@ -86,10 +110,18 @@ class LetterRemoteDataSourceImpl implements LetterRemoteDataSource {
   }
 
   @override
-  Future<LetterModel> sendLetter(String letterId) async {
+  Future<LetterModel> sendLetter({
+    required String letterId,
+    required String idempotencyKey,
+    String? mailType,
+    String? scheduledSendDate,
+  }) async {
     final response = await _functionsService.lettersSend(
-      letterId,
-      (json) => LetterModel.fromJson(json),
+      letterId: letterId,
+      idempotencyKey: idempotencyKey,
+      mailType: mailType,
+      scheduledSendDate: scheduledSendDate,
+      fromJson: (json) => LetterModel.fromJson(json),
     );
 
     if (!response.success || response.data == null) {

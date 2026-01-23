@@ -482,6 +482,7 @@ async function listDisputesHandler(
 
   // Validate input
   const pagination = validate(paginationSchema, data);
+
   const filters = validate(
     Joi.object({
       consumerId: schemas.documentId,
@@ -552,13 +553,14 @@ async function listDisputesHandler(
     countQuery = countQuery.where("status", "==", filters.status);
   }
   const countSnapshot = await countQuery.count().get();
+  const totalCount = countSnapshot.data().count;
 
   return {
     success: true,
     data: {
       items: disputes,
       pagination: {
-        total: countSnapshot.data().count,
+        total: totalCount,
         limit: pagination.limit,
         hasMore,
         nextCursor: hasMore ? docs[docs.length - 1].id : undefined,

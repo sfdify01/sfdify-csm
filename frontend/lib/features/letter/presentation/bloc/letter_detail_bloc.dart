@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:injectable/injectable.dart';
+import 'package:uuid/uuid.dart';
 import 'package:ustaxx_csm/features/letter/domain/repositories/letter_repository.dart';
 import 'package:ustaxx_csm/features/letter/presentation/bloc/letter_detail_event.dart';
 import 'package:ustaxx_csm/features/letter/presentation/bloc/letter_detail_state.dart';
@@ -17,6 +18,7 @@ class LetterDetailBloc extends Bloc<LetterDetailEvent, LetterDetailState> {
   }
 
   final LetterRepository _letterRepository;
+  final Uuid _uuid = const Uuid();
   String? _letterId;
 
   Future<void> _onLoadRequested(
@@ -88,7 +90,13 @@ class LetterDetailBloc extends Bloc<LetterDetailEvent, LetterDetailState> {
 
     emit(state.copyWith(actionStatus: LetterActionStatus.processing));
 
-    final result = await _letterRepository.sendLetter(_letterId!);
+    // Generate a unique idempotency key to prevent duplicate sends
+    final idempotencyKey = _uuid.v4();
+
+    final result = await _letterRepository.sendLetter(
+      letterId: _letterId!,
+      idempotencyKey: idempotencyKey,
+    );
 
     result.fold(
       (failure) => emit(state.copyWith(
