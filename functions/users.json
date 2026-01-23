@@ -1,0 +1,26 @@
+{"users": [
+{
+  "localId": "2Xg40p2SEoT9voZsgWr3DqzVCAk2",
+  "email": "testprod999@example.com",
+  "emailVerified": false,
+  "passwordHash": "LCD3is4Z7hTc3deShcuCqF4eNdOD9WpXY7AB3a6UVq/hfszD/2WpjDcsLucDHjZff7ET9mYYGgvSBekrXtPn8A==",
+  "salt": "XeWCzuI1iWMHow==",
+  "displayName": "Test User",
+  "createdAt": "1768732492181",
+  "disabled": false,
+  "customAttributes": "{\"tenantId\":\"tenant_b074b3c6e3f0\",\"role\":\"owner\",\"permissions\":[\"consumers:read\",\"consumers:write\",\"consumers:delete\",\"disputes:read\",\"disputes:write\",\"disputes:approve\",\"letters:read\",\"letters:write\",\"letters:send\",\"evidence:read\",\"evidence:write\",\"evidence:delete\",\"users:read\",\"users:write\",\"users:delete\",\"tenant:read\",\"tenant:write\",\"billing:read\",\"billing:write\",\"audit:read\",\"analytics:read\",\"settings:read\",\"settings:write\"]}",
+  "providerUserInfo": []
+},
+{
+  "localId": "i4lRByrWwmRB3sVfuPpRPhFDiUo1",
+  "email": "meylis.annagurbanow98@gmail.com",
+  "emailVerified": true,
+  "passwordHash": "LdShIrOXCOxCwVdt6fhQmR/udu9nyr64ArJYg2K2uFUWS2uP1F+4IDaNAaWr9NgjSIJOtxPXCDBSJ3mNyXKiGg==",
+  "salt": "AzDnO2Aha9pQYA==",
+  "displayName": "Meylis",
+  "lastSignedInAt": "1769145412286",
+  "createdAt": "1768733048009",
+  "disabled": false,
+  "customAttributes": "{\"tenantId\":\"tenant_a6e5c3e24a71\",\"role\":\"owner\",\"permissions\":[\"consumers:read\",\"consumers:write\",\"consumers:delete\",\"disputes:read\",\"disputes:write\",\"disputes:approve\",\"letters:read\",\"letters:write\",\"letters:send\",\"evidence:read\",\"evidence:write\",\"evidence:delete\",\"users:read\",\"users:write\",\"users:delete\",\"tenant:read\",\"tenant:write\",\"billing:read\",\"billing:write\",\"audit:read\",\"analytics:read\",\"settings:read\",\"settings:write\"]}",
+  "providerUserInfo": []
+}]}

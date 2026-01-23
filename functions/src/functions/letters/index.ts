@@ -890,7 +890,9 @@ async function listLettersHandler(
   data: ListLettersInput,
   context: RequestContext
 ): Promise<PaginatedResponse<Letter>> {
+  logger.info("[lettersList] Handler started", { data });
   const { tenantId } = context;
+  logger.info("[lettersList] TenantId extracted", { tenantId });
 
   // Validate input
   const pagination = validate(paginationSchema, data);

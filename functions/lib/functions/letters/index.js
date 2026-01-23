@@ -645,7 +645,9 @@ exports.lettersSend = functions.https.onCall((0, errors_1.withErrorHandling)((0,
 // lettersList - List letters with filters
 // ============================================================================
 async function listLettersHandler(data, context) {
+    logger.info("[lettersList] Handler started", { data });
     const { tenantId } = context;
+    logger.info("[lettersList] TenantId extracted", { tenantId });
     // Validate input
     const pagination = (0, validation_1.validate)(validation_1.paginationSchema, data);
     const filters = (0, validation_1.validate)(joi_1.default.object({
